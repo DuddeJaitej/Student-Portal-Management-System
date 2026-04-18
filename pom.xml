@@ -5,6 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
+<<<<<<< HEAD
 		<version>4.0.5</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
@@ -13,6 +14,16 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<name/>
 	<description/>
+=======
+		<version>3.5.7</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+	<groupId>com.AdminStudentCourse</groupId>
+	<artifactId>Admin_Student_Course</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>Admin_Student_Course</name>
+	<description>Admin Student Course</description>
+>>>>>>> 508897179aea63e105583eb3600f1b77c47a0698
 	<url/>
 	<licenses>
 		<license/>
@@ -36,7 +47,11 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
+<<<<<<< HEAD
 			<artifactId>spring-boot-starter-webmvc</artifactId>
+=======
+			<artifactId>spring-boot-starter-web</artifactId>
+>>>>>>> 508897179aea63e105583eb3600f1b77c47a0698
 		</dependency>
 
 		<dependency>
@@ -57,12 +72,16 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
+<<<<<<< HEAD
 			<artifactId>spring-boot-starter-data-jpa-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
+=======
+			<artifactId>spring-boot-starter-test</artifactId>
+>>>>>>> 508897179aea63e105583eb3600f1b77c47a0698
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

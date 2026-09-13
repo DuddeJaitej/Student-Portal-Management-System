@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Edit Profile</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 100%;
+            max-width: 400px;
+            margin: auto;
+        }
+        #imageSpace {
+            width: 100%;
+            height: 200px;
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+        #imageSpace img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 8px;
+        }
+        label {
+            margin-top: 10px;
+            display: block;
+            font-weight: bold;
+            color: #444;
+        }
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"] {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="tel"]:focus {
+            border-color: #28a745;
+        }
+        input[type="submit"] {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 15px;
+            transition: background-color 0.3s;
+        }
+        input[type="submit"]:hover {
+            background-color: #218838;
+        }
+        .profile {
+            display: none;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .profile h1 {
+            margin-bottom: 20px;
+        }
+        .button {
+            margin: 5px;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        /* Validation message styling */
+        .validation-message {
+            font-size: 12px;
+            margin-top: 2px;
+            margin-bottom: 10px;
+            display: none;
+            font-weight: 500;
+        }
+        .validation-message.error {
+            color: #e53935;
+            display: block;
+        }
+        .validation-message.success {
+            color: #43a047;
+            display: block;
+        }
+        input.invalid-field {
+            border-color: #e53935 !important;
+            background-color: #ffebee;
+        }
+        input.valid-field {
+            border-color: #43a047 !important;
+            background-color: #e8f5e9;
+        }
+
+        /* Toast Container Styling */
+        .toast-container {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        .toast {
+            pointer-events: auto;
+            min-width: 260px;
+            max-width: 360px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+            font-family: Arial, Helvetica, sans-serif;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 250ms ease, transform 250ms ease;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .toast-success {
+            background-color: #43a047;
+        }
+
+        .toast-error {
+            background-color: #e53935;
+        }
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="imageSpace">No image selected</div>
+    <input type="file" id="fileInput" accept="image/*"/><br>
+
+    <label for="name">Name</label>
+    <input type="text" id="name" placeholder="Enter name">
+
+    <label for="email">Email</label>
+    <input type="email" id="email" placeholder="Enter email">
+
+    <label for="registerno">Register Number</label>
+    <input type="text" id="registerno" placeholder="Enter register number">
+
+    <label for="phno">Phone Number</label>
+    <input type="tel" id="phno" placeholder="Enter phone number">
+
+    <label for="section">Section</label>
+    <input type="text" id="section" placeholder="Enter section">
+
+    <input type="submit" value="Save" id="saveButton" />
+</div>
+
+<script>
+    const API7 = 'http://localhost:9101';
+
+    function showToast(type, message, title) {
+      // type: 'success' | 'error' | 'info'
+      title = title || (type === 'success' ? 'Success' : type === 'error' ? 'Error ' : 'Info ');
+
+      let container = document.getElementById('toastContainer');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+      }
+
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.innerHTML = `<div class="title">${title}</div><div class="msg">${message}</div>`;
+      container.appendChild(toast);
+
+      // Force reflow then show
+      requestAnimationFrame(() => toast.classList.add('show'));
+
+      // Auto remove after 4 seconds
+      const timeout = setTimeout(() => {
+        toast.classList.remove('show');
+        toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+      }, 4000);
+
+      // Click to dismiss early
+      toast.addEventListener('click', () => {
+        clearTimeout(timeout);
+        toast.classList.remove('show');
+        toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+      });
+
+      return toast;
+    }
+
+
+    const validations = {
+        name: {
+            regex: /^[a-zA-Z][a-zA-Z0-9\s!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]*$/,
+            errorMsg: 'Name must start with an alphabet letter.'
+        },
+        email: {
+            regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+            errorMsg: 'Please enter a valid email address.'
+        },
+        registerno: {
+            regex: /^[a-zA-Z0-9]{5,20}$/,
+            errorMsg: 'Register number must be 5-20 alphanumeric characters.'
+        },
+        phno: {
+            regex: /^[0-9]{10}$/,
+            errorMsg: 'Phone number must be exactly 10 digits.'
+        },
+        section: {
+            regex: /^[a-zA-Z0-9\s\-]{1,10}$/,
+            errorMsg: 'Section must be 1-10 alphanumeric characters.'
+        }
+    };
+
+    // Initialize inline validations
+    Object.keys(validations).forEach(fieldId => {
+        const input = document.getElementById(fieldId);
+        if (!input) return;
+        const span = document.createElement('span');
+        span.className = 'validation-message';
+        span.id = `${fieldId}-validation`;
+        input.parentNode.insertBefore(span, input.nextSibling);
+
+        const validate = () => {
+            const val = input.value;
+            const config = validations[fieldId];
+            if (val === '' && !input.hasAttribute('required')) {
+                span.textContent = '';
+                span.className = 'validation-message';
+                input.classList.remove('invalid-field', 'valid-field');
+                return true;
+            }
+            if (config.regex.test(val)) {
+                span.textContent = '✓ Looks good!';
+                span.className = 'validation-message success';
+                input.classList.remove('invalid-field');
+                input.classList.add('valid-field');
+                return true;
+            } else {
+                span.textContent = config.errorMsg;
+                span.className = 'validation-message error';
+                input.classList.remove('valid-field');
+                input.classList.add('invalid-field');
+                return false;
+            }
+        };
+        input.addEventListener('input', validate);
+        input.addEventListener('blur', validate);
+    });
+
+    let profileId = localStorage.getItem('currentAdminProfileId') || '1';   // Use stored ID or default 1
+
+    const fileInput = document.getElementById('fileInput');
+    const imageSpace = document.getElementById('imageSpace');
+    const saveButton = document.getElementById('saveButton');
+
+    // Load existing profile data when page opens
+    async function loadExistingProfile() {
+        try {
+            const res = await fetch(`${API7}/Admin/Admin_Profile/${profileId}`);
+            if (!res.ok) throw new Error("Profile not found");
+
+            const profile = await res.json();
+
+            // Pre-fill form
+            document.getElementById('name').value = profile.name || '';
+            document.getElementById('email').value = profile.email || '';
+            document.getElementById('registerno').value = profile.regNo || '';
+            document.getElementById('phno').value = profile.phone || '';
+            document.getElementById('section').value = profile.section || '';
+
+            // Show current image
+            if (profile.imageName) {
+                imageSpace.innerHTML = `<img src="${API7}/Admin/Admin_Profile/image/${profile.imageName}" alt="Current Image" style="max-width:180px; border-radius:10px;"/>`;
+            } else if (profile.image && profile.image.length > 0) {
+                const base64 = btoa(new Uint8Array(profile.image).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+                imageSpace.innerHTML = `<img src="data:image/jpeg;base64,${base64}" alt="Current Image" style="max-width:180px; border-radius:10px;"/>`;
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('error', 'Could not load existing profile.');
+        }
+    }
+
+    // Preview new image
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                imageSpace.innerHTML = `<img src="${ev.target.result}" alt="New Image" style="max-width:180px; border-radius:10px;"/>`;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Save / Update Profile
+    saveButton.addEventListener('click', async function() {
+        // Validate all fields first
+        let isFormValid = true;
+        Object.keys(validations).forEach(fieldId => {
+            const input = document.getElementById(fieldId);
+            if (!input) return;
+            const config = validations[fieldId];
+            const span = document.getElementById(`${fieldId}-validation`);
+            if (!config.regex.test(input.value)) {
+                isFormValid = false;
+                if (span) {
+                    span.textContent = config.errorMsg;
+                    span.className = 'validation-message error';
+                }
+                input.classList.add('invalid-field');
+            }
+        });
+
+        if (!isFormValid) {
+            showToast('error', 'Please correct the highlighted fields.');
+            return;
+        }
+
+        const name = document.getElementById('name').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const phone = document.getElementById('phno').value.trim();
+        const regNo = document.getElementById('registerno').value.trim();
+        const section = document.getElementById('section').value.trim();
+
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('email', email);
+        formData.append('phone', phone);
+        formData.append('registerNo', regNo);
+        formData.append('section', section);
+
+        // Add new image only if user selected one
+        if (fileInput.files[0]) {
+            formData.append('image', fileInput.files[0]);
+        }
+
+        try {
+            const res = await fetch(`${API7}/Admin/Admin_Profile/${profileId}`, {
+                method: 'PUT',
+                body: formData
+            });
+
+            if (res.ok) {
+                showToast('success', 'Profile updated successfully!', 'Success');
+                
+                // Redirect to Home Page after toast shows
+                setTimeout(() => {
+                    window.location.href = 'AdminHomePage.html';
+                }, 1200);
+
+            } else {
+                const errorText = await res.text();
+                showToast('error', 'Failed to update profile: ' + errorText);
+            }
+        } catch (error) {
+            console.error(error);
+            showToast('error', 'Network error. Please check if server is running.');
+        }
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,8 @@
+com\StudentRegister\StudentRegister\SecurityConfig\StudentRegister_SecurityConfig.class
+com\StudentRegister\StudentRegister\JwtUtil\StudentRegister_JwtUtil.class
+com\StudentRegister\StudentRegister\StudentRegisterApplication.class
+com\StudentRegister\StudentRegister\Repository\StudentSignUpRepository.class
+com\StudentRegister\StudentRegister\Security\StudentRegister_Security.class
+com\StudentRegister\StudentRegister\Entity\StudentSignUp.class
+com\StudentRegister\StudentRegister\JwtFilter\StudentRegister_JwtFilter.class
+com\StudentRegister\StudentRegister\Controller\StudentSignUpController.class

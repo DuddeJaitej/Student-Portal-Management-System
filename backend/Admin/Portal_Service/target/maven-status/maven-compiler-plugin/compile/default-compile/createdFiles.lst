@@ -1,0 +1,15 @@
+com\portal\PortalServiceApplication.class
+com\portal\attendance\dto\StudentAttendanceRequest.class
+com\portal\mail\MailService.class
+com\portal\mail\dto\AttachmentMetadata.class
+com\portal\attendance\dto\AttendanceBatchRequest.class
+com\portal\attendance\AttendanceStatus.class
+com\portal\attendance\dto\AttendanceSummaryResponse.class
+com\portal\attendance\AttendanceRecord.class
+com\portal\mail\dto\MailSendRequest.class
+com\portal\mail\InternalMessage.class
+com\portal\attendance\AttendanceRecordRepository.class
+com\portal\mail\MailController.class
+com\portal\attendance\AttendanceController.class
+com\portal\attendance\AttendanceService.class
+com\portal\mail\InternalMessageRepository.class

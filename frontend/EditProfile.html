@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Profile</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 100%;
+            max-width: 400px;
+            margin: auto;
+        }
+        #imageSpace {
+            width: 100%;
+            height: 200px;
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+        #imageSpace img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 8px;
+        }
+        label {
+            margin-top: 10px;
+            display: block;
+            font-weight: bold;
+            color: #444;
+        }
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"] {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="tel"]:focus {
+            border-color: #28a745;
+        }
+        input[type="submit"] {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 15px;
+            transition: background-color 0.3s;
+        }
+        input[type="submit"]:hover {
+            background-color: #218838;
+        }
+        .profile {
+            display: none;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .profile h1 {
+            margin-bottom: 20px;
+        }
+        .button {
+            margin: 5px;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        /* Validation message styling */
+        .validation-message {
+            font-size: 12px;
+            margin-top: 2px;
+            margin-bottom: 10px;
+            display: none;
+            font-weight: 500;
+        }
+        .validation-message.error {
+            color: #e53935;
+            display: block;
+        }
+        .validation-message.success {
+            color: #43a047;
+            display: block;
+        }
+        input.invalid-field {
+            border-color: #e53935 !important;
+            background-color: #ffebee;
+        }
+        input.valid-field {
+            border-color: #43a047 !important;
+            background-color: #e8f5e9;
+        }
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="imageSpace">No image selected</div>
+    <input type="file" id="fileInput" accept="image/*"/><br>
+
+    <label for="name">Name</label>
+    <input type="text" id="name" placeholder="Enter name">
+
+    <label for="email">Email</label>
+    <input type="email" id="email" placeholder="Enter email">
+
+    <label for="registerno">Register Number</label>
+    <input type="text" id="registerno" placeholder="Enter register number">
+
+    <label for="phno">Phone Number</label>
+    <input type="tel" id="phno" placeholder="Enter phone number">
+
+    <label for="section">Section</label>
+    <input type="text" id="section" placeholder="Enter section">
+
+    <input type="submit" value="Save" id="saveButton" />
+</div>
+
+<script>
+    const API7 = 'http://localhost:9101';
+    const STUDENT_DATA_API = 'http://localhost:9098/Admin/Admin-Students';
+    const STUDENT_AUTH_API = 'http://localhost:8083/auth';
+
+    const fileInput = document.getElementById('fileInput');
+    const imageSpace = document.getElementById('imageSpace');
+    const saveButton = document.getElementById('saveButton');
+
+    // Get the logged-in student's register number
+    const currentRegNo = localStorage.getItem('profileRegNo') ||
+                         localStorage.getItem('studentRegisterNumber') ||
+                         localStorage.getItem('registerNumber') || '';
+
+    // Load existing profile data when page loads
+    async function loadProfile() {
+        if (!currentRegNo) {
+            console.warn('No register number found. Please log in first.');
+            return;
+        }
+        try {
+            const res = await fetch(`${API7}/Admin/Admin_Profile/by-reg/${encodeURIComponent(currentRegNo)}`);
+
+            if (res.status === 404) {
+                const studentRes = await fetch(`${STUDENT_DATA_API}/by-reg/${encodeURIComponent(currentRegNo)}`);
+                if (!studentRes.ok) return;
+                const student = await studentRes.json();
+                document.getElementById('name').value = student.name || '';
+                document.getElementById('email').value = student.email || '';
+                document.getElementById('registerno').value = student.registerNo || currentRegNo;
+                document.getElementById('section').value = student.section || '';
+                document.getElementById('phno').value = student.phone || '';
+                return;
+            }
+
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+
+            const profile = await res.json();
+
+            // Fill form fields
+            document.getElementById('name').value = profile.name || '';
+            document.getElementById('email').value = profile.email || '';
+            document.getElementById('registerno').value = profile.regNo || currentRegNo;
+            document.getElementById('phno').value = profile.phone || '';
+            document.getElementById('section').value = profile.section || '';
+
+            // Display existing image
+            if (profile.imageName) {
+                imageSpace.innerHTML = `<img src="${API7}/Admin/Admin_Profile/image/${profile.imageName}"
+                     alt="Profile Image" style="max-width:180px; border-radius:10px;"/>`;
+            } else if (profile.image && profile.image.length > 0) {
+                const base64 = btoa(String.fromCharCode(...new Uint8Array(profile.image)));
+                imageSpace.innerHTML = `<img src="data:image/jpeg;base64,${base64}"
+                     alt="Profile Image" style="max-width:180px; border-radius:10px;"/>`;
+            }
+
+        } catch (error) {
+            console.error('Error loading profile:', error);
+            alert('Could not load profile data. Please try again.');
+        }
+    }
+
+    // Handle new image selection
+    fileInput.addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imageSpace.innerHTML = `<img src="${e.target.result}" alt="Selected Image" style="max-width:180px; border-radius:10px;"/>`;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    const validations = {
+        name: {
+            regex: /^[a-zA-Z][a-zA-Z0-9\s!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]*$/,
+            errorMsg: 'Name must start with an alphabet letter.'
+        },
+        email: {
+            regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+            errorMsg: 'Please enter a valid email address.'
+        },
+        registerno: {
+            regex: /^[a-zA-Z0-9]{5,20}$/,
+            errorMsg: 'Register number must be 5-20 alphanumeric characters.'
+        },
+        phno: {
+            regex: /^[0-9]{10}$/,
+            errorMsg: 'Phone number must be exactly 10 digits.'
+        },
+        section: {
+            regex: /^[a-zA-Z0-9\s\-]{1,10}$/,
+            errorMsg: 'Section must be 1-10 alphanumeric characters.'
+        }
+    };
+
+    // Initialize inline validations
+    Object.keys(validations).forEach(fieldId => {
+        const input = document.getElementById(fieldId);
+        if (!input) return;
+        const span = document.createElement('span');
+        span.className = 'validation-message';
+        span.id = `${fieldId}-validation`;
+        input.parentNode.insertBefore(span, input.nextSibling);
+
+        const validate = () => {
+            const val = input.value;
+            const config = validations[fieldId];
+            if (val === '' && !input.hasAttribute('required')) {
+                span.textContent = '';
+                span.className = 'validation-message';
+                input.classList.remove('invalid-field', 'valid-field');
+                return true;
+            }
+            if (config.regex.test(val)) {
+                span.textContent = '✓ Looks good!';
+                span.className = 'validation-message success';
+                input.classList.remove('invalid-field');
+                input.classList.add('valid-field');
+                return true;
+            } else {
+                span.textContent = config.errorMsg;
+                span.className = 'validation-message error';
+                input.classList.remove('valid-field');
+                input.classList.add('invalid-field');
+                return false;
+            }
+        };
+        input.addEventListener('input', validate);
+        input.addEventListener('blur', validate);
+    });
+
+    // Save / Update Profile
+    saveButton.addEventListener('click', async function() {
+        // Validate all fields first
+        let isFormValid = true;
+        Object.keys(validations).forEach(fieldId => {
+            const input = document.getElementById(fieldId);
+            if (!input) return;
+            const config = validations[fieldId];
+            const span = document.getElementById(`${fieldId}-validation`);
+            if (!config.regex.test(input.value)) {
+                isFormValid = false;
+                if (span) {
+                    span.textContent = config.errorMsg;
+                    span.className = 'validation-message error';
+                }
+                input.classList.add('invalid-field');
+            }
+        });
+
+        if (!isFormValid) {
+            alert('Please correct the highlighted fields.');
+            return;
+        }
+
+        if (!currentRegNo) {
+            alert('No register number found. Please log in first.');
+            return;
+        }
+
+        const name = document.getElementById('name').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const phone = document.getElementById('phno').value.trim();
+        const section = document.getElementById('section').value.trim();
+
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('email', email);
+        formData.append('phone', phone);
+        formData.append('section', section);
+        formData.append('registerNo', document.getElementById('registerno').value.trim());
+
+        // Add new image only if user selected one
+        const selectedFile = fileInput.files[0];
+        if (selectedFile) {
+            formData.append('image', selectedFile);
+        }
+
+        try {
+            const updatedRegNo = document.getElementById('registerno').value.trim();
+            const studentRes = await fetch(`${STUDENT_DATA_API}/by-reg/${encodeURIComponent(currentRegNo)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, phone, section, registerNo: updatedRegNo })
+            });
+            if (!studentRes.ok) throw new Error('Student details could not be saved.');
+
+            const authRes = await fetch(`${STUDENT_AUTH_API}/profile`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ currentRegisterNo: currentRegNo, username: name, email, registerNo: updatedRegNo })
+            });
+            if (!authRes.ok) throw new Error('Login profile could not be synchronized.');
+
+            const res = await fetch(`${API7}/Admin/Admin_Profile/by-reg/${encodeURIComponent(currentRegNo)}`, {
+                method: 'PUT',
+                body: formData
+            });
+
+            if (res.ok) {
+                // Store profile data locally for use in the student homepage header
+                localStorage.setItem('profileName', name);
+                localStorage.setItem('profileEmail', email);
+                localStorage.setItem('profileRegNo', updatedRegNo);
+                localStorage.setItem('studentRegisterNumber', updatedRegNo);
+                localStorage.setItem('registerNumber', updatedRegNo);
+                alert('Profile updated successfully!');
+                window.location.href = 'HomePage.html';
+            } else {
+                const errorText = await res.text();
+                alert('Failed to update profile: ' + errorText);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Network error. Is the server running?');
+        }
+    });
+
+    // Load profile when page opens
+    window.onload = loadProfile;
+</script>
+
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presidency University - Student Login</title>
+    <meta name="description" content="Login to the Presidency University Student Portal">
+    <link rel="stylesheet" href="Login.css">
+</head>
+<body>
+    <div class="container">
+        <div class="image-container">
+            <img src="../Images/PresidencyImages/FormPages.jpg" alt="Presidency University">
+        </div>
+        <div class="login-container">
+            <h1>Presidency University</h1>
+            <p>Student Login</p>
+            <div id="formMessage" class="form-message" role="status" aria-live="polite"></div>
+
+            <form id="loginForm" method="post">
+                <div class="input-field">
+                    <label for="username">Email / Register Number</label>
+                    <input type="text" id="username" name="username" placeholder="Email or Register Number" required>
+                </div>
+                <div class="input-field">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter Password" required>
+                </div>
+                <button type="submit" id="loginBtn">LogIn</button>
+                <div id="studentGoogleButton" class="google-auth-button"></div>
+            </form>
+
+            <a class="forgotPass" href="#" onclick="forgotPassword(); return false;">Forgot Password?</a>
+            <p><a class="createAcc" href="Signup.html">Click here to create new account?</a></p>
+        </div>
+    </div>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="googleAuth.js"></script>
+    <script>
+        const STUDENT_AUTH_API = 'http://localhost:8083';
+
+        const validations = {
+            username: {
+                regex: /^.{3,}$/,
+                errorMsg: 'Enter your email or register number (min. 3 characters).'
+            },
+            password: {
+                regex: /^.{6,}$/,
+                errorMsg: 'Password must be at least 6 characters.'
+            }
+        };
+
+        Object.keys(validations).forEach(fieldId => {
+            const input = document.getElementById(fieldId);
+            if (!input) return;
+            const span = document.createElement('span');
+            span.className = 'validation-message';
+            span.id = `${fieldId}-validation`;
+            input.parentNode.appendChild(span);
+
+            const validate = () => {
+                const config = validations[fieldId];
+                if (config.regex.test(input.value.trim())) {
+                    span.textContent = 'Looks good!';
+                    span.className = 'validation-message success';
+                    input.classList.remove('invalid-field');
+                    input.classList.add('valid-field');
+                    return true;
+                }
+                span.textContent = config.errorMsg;
+                span.className = 'validation-message error';
+                input.classList.remove('valid-field');
+                input.classList.add('invalid-field');
+                return false;
+            };
+
+            input.addEventListener('input', () => {
+                clearFormMessage();
+                validate();
+            });
+            input.addEventListener('blur', validate);
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            clearFormMessage();
+
+            const isValid = Object.keys(validations).every(fieldId =>
+                validations[fieldId].regex.test(document.getElementById(fieldId).value.trim()));
+            if (!isValid) {
+                showFormMessage('Please correct the highlighted fields.', 'error');
+                return;
+            }
+
+            const identifier = document.getElementById('username').value.trim();
+            const password   = document.getElementById('password').value.trim();
+            const loginBtn   = document.getElementById('loginBtn');
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Logging in...';
+
+            try {
+                const response = await fetch(`${STUDENT_AUTH_API}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ identifier, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showFormMessage(data.error || 'Login failed. Please check your credentials.', 'error');
+                    return;
+                }
+
+                // Store auth info
+                localStorage.setItem('authToken', data.token);
+                localStorage.setItem('authProvider', 'local');
+                localStorage.setItem('studentName', data.username);
+                localStorage.setItem('profileName', data.username);
+                localStorage.setItem('profileEmail', data.email);
+                localStorage.setItem('registerNumber', data.registerNo);
+                localStorage.setItem('studentRegisterNumber', data.registerNo);
+                localStorage.setItem('profileRegNo', data.registerNo);
+                localStorage.setItem('userRole', data.role);
+
+                showFormMessage('Login successful. Redirecting...', 'success');
+                setTimeout(() => {
+                    window.location.href = '../HomePage.html';
+                }, 700);
+
+            } catch (error) {
+                console.error('Login error:', error);
+                showFormMessage('Could not reach the server. Please make sure the student service is running.', 'error');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'LogIn';
+            }
+        });
+
+        function forgotPassword() {
+            showFormMessage('Please contact the administrator to reset your password.', 'info');
+        }
+
+        setupGoogleAuth({
+            buttonId: 'studentGoogleButton',
+            role: 'STUDENT',
+            redirectUrl: '../HomePage.html'
+        });
+    </script>
+</body>
+</html>
+

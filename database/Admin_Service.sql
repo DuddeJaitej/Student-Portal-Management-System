@@ -1,0 +1,30 @@
+-- Repeatable, non-destructive setup for the admin and shared services.
+CREATE DATABASE IF NOT EXISTS Admin_Service;
+CREATE DATABASE IF NOT EXISTS AdminStudent_Course;
+CREATE DATABASE IF NOT EXISTS AdminFaculty_Course;
+CREATE DATABASE IF NOT EXISTS AdminStudents_Details;
+CREATE DATABASE IF NOT EXISTS AdminFaculty_Details;
+CREATE DATABASE IF NOT EXISTS AdminFaculty_Timetable;
+CREATE DATABASE IF NOT EXISTS AdminStudents_Timetable;
+CREATE DATABASE IF NOT EXISTS Portal_Service;
+CREATE DATABASE IF NOT EXISTS Student_Service;
+CREATE DATABASE IF NOT EXISTS Faculty_Service;
+
+USE Admin_Service;
+
+CREATE TABLE IF NOT EXISTS Admin_Register (
+	id BIGINT NOT NULL AUTO_INCREMENT,
+	name VARCHAR(255) NOT NULL,
+	password VARCHAR(255) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS Admin_SignUp (
+	adminid VARCHAR(100) NOT NULL,
+	password VARCHAR(255) NOT NULL,
+	role ENUM('STUDENT', 'FACULTY', 'ADMIN') NOT NULL DEFAULT 'ADMIN',
+	PRIMARY KEY (adminid)
+);
+
+SHOW DATABASES;
+

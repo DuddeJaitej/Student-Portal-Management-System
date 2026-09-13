@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presidency University</title>
+    <link rel="stylesheet" href="FacultyLogin.css">
+</head>
+<body>
+    <div class="container">
+        <div class="image-container">
+            <img src="../Images/PresidencyImages/FormPages.jpg" alt="Presidency University">
+        </div>
+        <div class="login-container">
+            <h1>Presidency University</h1>
+            <p>Faculty Login</p>
+            <div id="formMessage" class="form-message" role="status" aria-live="polite"></div>
+
+            <form id="loginForm" method="post">
+                <div class="input-field">
+                    <label for="facultyName">Faculty Name</label>
+                    <input type="text" id="facultyName" placeholder="Name: Emily" required>
+                </div>
+                <div class="input-field">
+                    <label for="registerNumber">Register Number</label>
+                    <input type="text" id="registerNumber" placeholder="Register Number: 2026Assis0010" required>
+                </div>
+                <div class="input-field">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Enter Password" required>
+                </div>
+                <button type="submit">Login</button>
+                <div id="facultyGoogleButton" class="google-auth-button"></div>
+            </form>
+
+            <p class="auth-switch">New faculty member? <a href="FacultyRegistration.html">Register here</a></p>
+
+            <a class="forgotPass" href="#" onclick="forgotPassword(); return false;">Forgot Password?</a>
+        </div>
+    </div>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="googleAuth.js"></script>
+    <script>
+        const validations = {
+            facultyName: {
+                regex: /^[a-zA-Z][a-zA-Z0-9\s!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]*$/,
+                errorMsg: 'Faculty name must start with an alphabet letter.'
+            },
+            registerNumber: {
+                regex: /^[a-zA-Z0-9]{5,20}$/,
+                errorMsg: 'Register number must be 5-20 alphanumeric characters.'
+            },
+            password: {
+                regex: /^.{6,20}$/,
+                errorMsg: 'Password must be 6-20 characters.'
+            }
+        };
+
+        Object.keys(validations).forEach(fieldId => {
+            const input = document.getElementById(fieldId);
+            if (!input) return;
+
+            const span = document.createElement('span');
+            span.className = 'validation-message';
+            span.id = `${fieldId}-validation`;
+            input.parentNode.appendChild(span);
+
+            const validate = () => {
+                const value = input.value.trim();
+                const config = validations[fieldId];
+
+                if (config.regex.test(value)) {
+                    span.textContent = 'Looks good!';
+                    span.className = 'validation-message success';
+                    input.classList.remove('invalid-field');
+                    input.classList.add('valid-field');
+                    return true;
+                }
+
+                span.textContent = config.errorMsg;
+                span.className = 'validation-message error';
+                input.classList.remove('valid-field');
+                input.classList.add('invalid-field');
+                return false;
+            };
+
+            input.addEventListener('input', () => {
+                clearFormMessage();
+                validate();
+            });
+            input.addEventListener('blur', validate);
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            clearFormMessage();
+
+            const isFormValid = Object.keys(validations).every(fieldId => {
+                const input = document.getElementById(fieldId);
+                const config = validations[fieldId];
+                const span = document.getElementById(`${fieldId}-validation`);
+
+                if (!input || config.regex.test(input.value.trim())) return true;
+
+                if (span) {
+                    span.textContent = config.errorMsg;
+                    span.className = 'validation-message error';
+                }
+                input.classList.add('invalid-field');
+                return false;
+            });
+
+            if (!isFormValid) {
+                showFormMessage('Please correct the highlighted fields.', 'error');
+                return;
+            }
+
+            const facultyNameInput = document.getElementById('facultyName').value.trim();
+            const registerNumberInput = document.getElementById('registerNumber').value.trim();
+            const passwordInput = document.getElementById('password').value.trim();
+
+            try {
+                const response = await fetch('http://localhost:9070/Faculty/Faculty_Login/FacultyLogin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: facultyNameInput,
+                        registerNumber: registerNumberInput,
+                        password: passwordInput
+                    })
+                });
+
+                const resultText = await response.text();
+
+                if (!response.ok) {
+                    showFormMessage(resultText || 'Invalid faculty name or register number.', 'error');
+                    return;
+                }
+
+                localStorage.setItem('authToken', resultText);
+                localStorage.setItem('facultyName', facultyNameInput);
+                localStorage.setItem('registerNumber', registerNumberInput);
+
+                showFormMessage('Login successful. Redirecting...', 'success');
+                setTimeout(() => {
+                    window.location.href = '../FacultyHomePage.html';
+                }, 900);
+            } catch (error) {
+                console.error('Faculty login error:', error);
+                showFormMessage('Something went wrong. Please make sure the faculty service is running.', 'error');
+            }
+        });
+
+        function forgotPassword() {
+            showFormMessage('Please contact the administrator to reset your password.', 'info');
+        }
+
+        setupGoogleAuth({
+            buttonId: 'facultyGoogleButton',
+            role: 'FACULTY',
+            redirectUrl: '../FacultyHomePage.html'
+        });
+    </script>
+</body>
+</html>

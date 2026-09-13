@@ -1,0 +1,233 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: student-portal-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-student_portal_root}
+      MYSQL_ROOT_HOST: "%"
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  admin-students:
+    build:
+      context: ./backend/Admin/Admin_Students
+      dockerfile: ../../../Dockerfile.spring
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/AdminStudents_Details
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-student_portal_root}
+    ports:
+      - "9098:9098"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  admin-student-course:
+    build:
+      context: ./backend/Admin/Admin_Student_Course
+      dockerfile: ../../../Dockerfile.spring
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/AdminStudent_Course
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-student_portal_root}
+    ports:
+      - "9094:9094"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  admin-students-timetable:
+    build:
+      context: ./backend/Admin/Admin_Students_Timetable
+      dockerfile: ../../../Dockerfile.spring
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/AdminStudents_Timetable
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-student_portal_root}
+    ports:
+      - "9100:9100"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  admin-faculty:
+    build:
+      context: ./backend/Admin/Admin_Faculty
+      dockerfile: ../../../Dockerfile.spring
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/AdminFaculty_Details
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-student_portal_root}
+    ports:
+      - "9102:9102"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  faculty-register:
+    build:
+      context: ./backend/Admin/FacultyRegister
+      dockerfile: ../../../Dockerfile.spring
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/AdminFaculty_Details
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-student_portal_root}
+    ports:
+      - "9070:9070"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  faculty-home:
+    build:
+      context: ./backend/Admin/FacultyHome
+      dockerfile: ../../../Dockerfile.spring
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/AdminFaculty_Course
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-student_portal_root}
+    ports:
+      - "9071:9071"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  admin-faculty-course:
+    build:
+      context: ./backend/Admin/Admin_Faculty_Course
+      dockerfile: ../../../Dockerfile.spring
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/AdminFaculty_Course
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-student_portal_root}
+    ports:
+      - "9095:9095"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  admin-faculty-timetable:
+    build:
+      context: ./backend/Admin/Admin_Faculty_Timetable
+      dockerfile: ../../../Dockerfile.spring
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/AdminFaculty_Timetable
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-student_portal_root}
+    ports:
+      - "9099:9099"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  admin-register:
+    build:
+      context: ./backend/Admin/Admin_Register
+      dockerfile: ../../../Dockerfile.spring
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/Admin_Service
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-student_portal_root}
+    ports:
+      - "9093:9093"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  admin-profile:
+    build:
+      context: ./backend/Admin/Admin_Profile
+      dockerfile: ../../../Dockerfile.spring
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/Admin_Service
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-student_portal_root}
+    ports:
+      - "9101:9101"
+    volumes:
+      - admin-profile-uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  my-fee:
+    build:
+      context: ./backend/Admin/MyFee
+      dockerfile: ../../../Dockerfile.spring
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/Admin_Service
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-student_portal_root}
+    ports:
+      - "9096:9096"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  admin-dashboard:
+    build:
+      context: ./backend/Admin/AdminDashboard
+      dockerfile: ../../../Dockerfile.spring
+    environment:
+      STUDENTS_SERVICE_URL: http://admin-students:9098
+      FACULTY_SERVICE_URL: http://admin-faculty:9102
+    ports:
+      - "9083:9083"
+    depends_on:
+      - admin-students
+      - admin-faculty
+
+  portal-service:
+    build:
+      context: ./backend/Admin/Portal_Service
+      dockerfile: ../../../Dockerfile.spring
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/Portal_Service
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-student_portal_root}
+    ports:
+      - "9110:9110"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  student-register:
+    build:
+      context: ./backend/Admin/StudentRegister
+      dockerfile: ../../../Dockerfile.spring
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/Student_Service
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-student_portal_root}
+    ports:
+      - "8083:8083"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - portal-service
+      - faculty-home
+      - faculty-register
+      - admin-students
+      - admin-dashboard
+      - student-register
+
+volumes:
+  mysql-data:
+  admin-profile-uploads:
+

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presidency University</title>
+    <link rel="stylesheet" href="Signup.css">
+</head>
+<body>
+    <div class="container">
+        <div class="image-container">
+            <img src="../Images/PresidencyImages/FormPages.jpg" alt="Presidency University">
+        </div>
+        <div class="Signup-container">
+            <h1>Presidency University</h1>
+            <p>Student Registration</p>
+            <div id="formMessage" class="form-message" role="status" aria-live="polite"></div>
+
+            <form id="SignupForm" method="post">
+                <div class="input-field">
+                    <label for="username">User Name</label>
+                    <input type="text" id="username" name="username" placeholder="User Name" required>
+                </div>
+                <div class="input-field">
+                    <label for="registerNo">Register number</label>
+                    <input type="text" id="registerNo" name="registerNo" placeholder="Eg: 20232MCA0000" required>
+                </div>
+                <div class="input-field">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="Enter Email" required>
+                </div>
+                <div class="input-field">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter Password" required>
+                </div>
+                <button type="submit" id="registerBtn">Register</button>
+                <div id="studentRegisterGoogleButton" class="google-auth-button"></div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="googleAuth.js"></script>
+    <script>
+        const validations = {
+            username: {
+                regex: /^[a-zA-Z][a-zA-Z0-9\s!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]*$/,
+                errorMsg: 'Name must start with an alphabet letter.'
+            },
+            registerNo: {
+                regex: /^[a-zA-Z0-9]{5,20}$/,
+                errorMsg: 'Register number must be 5-20 alphanumeric characters.'
+            },
+            email: {
+                regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                errorMsg: 'Please enter a valid email address.'
+            },
+            password: {
+                regex: /^.{6,20}$/,
+                errorMsg: 'Password must be 6-20 characters.'
+            }
+        };
+
+        Object.keys(validations).forEach(fieldId => {
+            const input = document.getElementById(fieldId);
+            const span = document.createElement('span');
+            span.className = 'validation-message';
+            span.id = `${fieldId}-validation`;
+            input.parentNode.appendChild(span);
+
+            const validate = () => {
+                const config = validations[fieldId];
+                if (config.regex.test(input.value.trim())) {
+                    span.textContent = 'Looks good!';
+                    span.className = 'validation-message success';
+                    input.classList.remove('invalid-field');
+                    input.classList.add('valid-field');
+                    return true;
+                }
+
+                span.textContent = config.errorMsg;
+                span.className = 'validation-message error';
+                input.classList.remove('valid-field');
+                input.classList.add('invalid-field');
+                return false;
+            };
+
+            input.addEventListener('input', () => {
+                clearFormMessage();
+                validate();
+            });
+            input.addEventListener('blur', validate);
+        });
+
+        document.getElementById('SignupForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            clearFormMessage();
+
+            const isFormValid = Object.keys(validations).every(fieldId =>
+                validations[fieldId].regex.test(document.getElementById(fieldId).value.trim()));
+
+            if (!isFormValid) {
+                showFormMessage('Please correct the highlighted fields.', 'error');
+                return;
+            }
+
+            const registerBtn = document.getElementById('registerBtn');
+            registerBtn.disabled = true;
+            registerBtn.textContent = 'Registering...';
+
+            try {
+                const response = await fetch('http://localhost:8083/auth/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value.trim(),
+                        registerNo: document.getElementById('registerNo').value.trim(),
+                        email: document.getElementById('email').value.trim(),
+                        password: document.getElementById('password').value,
+                        role: 'STUDENT'
+                    })
+                });
+                const result = await response.json();
+
+                if (!response.ok) {
+                    showFormMessage(result.error || 'Registration failed. Please try again.', 'error');
+                    return;
+                }
+
+                showFormMessage(result.message || 'Registration successful. Redirecting...', 'success');
+                setTimeout(() => {
+                    window.location.href = 'Login.html';
+                }, 900);
+            } catch (error) {
+                console.error('Student registration error:', error);
+                showFormMessage('Something went wrong. Please make sure the student service is running.', 'error');
+            } finally {
+                registerBtn.disabled = false;
+                registerBtn.textContent = 'Register';
+            }
+        });
+
+        setupGoogleAuth({
+            buttonId: 'studentRegisterGoogleButton',
+            role: 'STUDENT',
+            redirectUrl: '../HomePage.html'
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Presidency University</title>
+  <link rel="stylesheet" href="FacultyHomePage.css">
+  <script>
+
+    const home = "http://localhost:9071";
+    const timetables = "http://localhost:9099";
+    const attendance = "http://localhost:9073";
+    const email = "http://localhost:9074";
+    const profile = "http://localhost:9101";
+    const PORTAL_API = "http://localhost:9110/portal";
+    const FACULTY_PROFILE_API = "http://localhost:9102/Admin/Admin_Faculty";
+    const FACULTY_COURSE_API = "http://localhost:9095/admin/admin-faculty-course";
+
+    async function refreshFacultyProfile() {
+      const registerNo = localStorage.getItem('registerNumber') || localStorage.getItem('profileRegNo');
+      if (!registerNo) return;
+
+      try {
+        const response = await fetch(`${FACULTY_PROFILE_API}/by-reg/${encodeURIComponent(registerNo)}`);
+        if (!response.ok) return;
+        const faculty = await response.json();
+        localStorage.setItem('facultyName', faculty.name || '');
+        localStorage.setItem('profileName', faculty.name || '');
+        localStorage.setItem('profileEmail', faculty.email || '');
+        localStorage.setItem('profilePhone', faculty.phone || '');
+        localStorage.setItem('profileRegNo', faculty.registerNo || registerNo);
+        localStorage.setItem('registerNumber', faculty.registerNo || registerNo);
+        updateHeaderProfile();
+
+        const fields = {
+          profileName: faculty.name || 'N/A',
+          profileEmail: faculty.email || 'N/A',
+          profilePhone: faculty.phone || 'N/A',
+          profileRegNo: faculty.registerNo || registerNo,
+          profileSection: faculty.section || 'N/A'
+        };
+        Object.entries(fields).forEach(([id, value]) => {
+          const element = document.getElementById(id);
+          if (element) element.textContent = value;
+        });
+      } catch (error) {
+        console.error('Faculty profile refresh failed:', error);
+      }
+    }
+
+    function loadContent(contentId) {
+      const contentDiv = document.querySelector('.content');
+      
+      contentDiv.innerHTML = '';
+
+      switch (contentId) {
+        
+        case 'home':
+        contentDiv.innerHTML = `
+            <h3>Welcome to Faculty Dashboard</h3>
+            <h2>My Courses</h2>
+            <div id="loading" class="loading" style="display: block;">Loading your courses...</div>
+            <div id="course-grid" class="course-grid" style="display: none;"></div>
+            <div id="no-courses" class="no-courses" style="display: none;">
+                <p>No courses assigned to you yet.</p>
+            </div>
+        `;
+
+        loadMyCourses();
+        break;
+
+
+        case 'timetable':
+        contentDiv.innerHTML = `
+          <div class="container3">
+            <div class="header">
+              <h2>My Weekly Timetable</h2>
+              <p id="facultyNameDisplay" style="color: #1976d2; font-weight: bold;"></p>
+            </div>
+            
+            <div id="loading-timetable" style="text-align:center; padding:30px;">
+              Loading your timetable...
+            </div>
+            
+            <div id="timetableContainer"></div>
+
+            <div id="no-timetable" style="display:none; text-align:center; padding:40px; color:#666;">
+              <p>No timetable assigned yet.</p>
+            </div>
+          </div>
+        `;
+
+        loadMyTimetable();
+        break;
+
+        case 'academic_calendar':
+          contentDiv.innerHTML = `
+            <div class="calendar-container">
+              <h1>2025 College Calendar</h1>
+              <div class="calendar">
+                <!-- January -->
+                <div class="month">
+                  <h2>January</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span class="empty"></span><span class="empty"></span><span class="empty"></span>
+                    <span>1</span><span>2</span><span>3</span><span>4</span>
+                    <span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span>
+                    <span>12</span><span>13</span><span>14</span><span>15</span><span class="festival">16</span><span>17</span><span>18</span>
+                    <span>19</span><span>20</span><span>21</span><span>22</span><span>23</span><span>24</span><span>25</span>
+                    <span>26</span><span>27</span><span>28</span><span>29</span><span>30</span><span>31</span>
+                  </div>
+                  <p class="details">Holidays: 16th (Makar Sankranti), 26th (Republic Day)</p>
+                  <p class="reopen">College reopens: 27th January</p>
+                </div>
+                <!-- February -->
+                <div class="month">
+                  <h2>February</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span class="empty"></span><span class="empty"></span><span class="empty"></span>
+                    <span>1</span><span>2</span><span>3</span><span class="festival">4</span>
+                    <span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span>
+                    <span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span>
+                    <span>19</span><span>20</span><span>21</span><span>22</span><span>23</span><span>24</span><span>25</span>
+                    <span>26</span><span>27</span><span>28</span>
+                  </div>
+                  <p class="details">Holiday: 4th (Vasant Panchami)</p>
+                  <p class="reopen">College reopens: 5th February</p>
+                </div>
+                <!-- March -->
+                <div class="month">
+                  <h2>March</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
+                    <span>8</span><span>9</span><span>10</span><span>11</span><span class="festival">12</span><span>13</span><span>14</span>
+                    <span>15</span><span>16</span><span class="festival">17</span><span>18</span><span>19</span><span>20</span><span>21</span>
+                    <span>22</span><span>23</span><span>24</span><span>25</span><span>26</span><span>27</span><span>28</span>
+                    <span>29</span><span>30</span><span>31</span>
+                  </div>
+                  <p class="details">Holidays: 12th (Mahashivratri), 17th (Holi)</p>
+                  <p class="reopen">College reopens: 18th March</p>
+                </div>
+                <!-- April -->
+                <div class="month">
+                  <h2>April</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span class="empty"></span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+                    <span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span class="festival">12</span><span>13</span>
+                    <span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span>
+                    <span>21</span><span>22</span><span>23</span><span>24</span><span>25</span><span>26</span><span>27</span>
+                    <span>28</span><span>29</span><span class="festival">30</span>
+                  </div>
+                  <p class="details">Holidays: 12th (Ram Navami), 30th (Buddha Purnima)</p>
+                  <p class="reopen">College reopens: 1st May</p>
+                </div>
+
+                <!-- May -->
+                <div class="month">
+                  <h2>May</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
+                    <span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span>
+                    <span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>21</span>
+                    <span>22</span><span>23</span><span>24</span><span>25</span><span class="festival">26</span><span>27</span><span>28</span>
+                    <span>29</span><span>30</span><span>31</span>
+                  </div>
+                  <p class="details">Holiday: 26th (Eid al-Fitr)</p>
+                  <p class="reopen">College reopens: 27th May</p>
+                </div>
+
+                <!-- June -->
+                <div class="month">
+                  <h2>June</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span class="empty"></span><span class="empty"></span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+                    <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span>
+                    <span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span>
+                    <span>20</span><span>21</span><span>22</span><span>23</span><span>24</span><span>25</span><span>26</span>
+                    <span>27</span><span>28</span><span>29</span><span>30</span>
+                  </div>
+                  <p class="details">No Holidays</p>
+                  <p class="reopen">Regular classes throughout June</p>
+                </div>
+
+                <!-- July -->
+                <div class="month">
+                  <h2>July</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
+                    <span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span class="festival">13</span><span>14</span>
+                    <span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>21</span>
+                    <span>22</span><span>23</span><span>24</span><span>25</span><span>26</span><span>27</span><span>28</span>
+                    <span>29</span><span>30</span><span>31</span>
+                  </div>
+                  <p class="details">Holiday: 13th (Bakri Eid)</p>
+                  <p class="reopen">College reopens: 14th July</p>
+                </div>
+
+                <!-- August -->
+                <div class="month">
+                  <h2>August</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span class="empty"></span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+                    <span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span>
+                    <span class="festival">14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span>
+                    <span>21</span><span>22</span><span>23</span><span>24</span><span>25</span><span>26</span><span>27</span>
+                    <span>28</span><span>29</span><span>30</span><span>31</span>
+                  </div>
+                  <p class="details">Holiday: 14th (Independence Day)</p>
+                  <p class="reopen">College reopens: 16th August</p>
+                </div>
+
+                <!-- September -->
+                <div class="month">
+                  <h2>September</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span class="empty"></span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+                    <span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span class="festival">13</span>
+                    <span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span>
+                    <span>21</span><span>22</span><span>23</span><span>24</span><span class="festival">25</span><span>26</span><span>27</span>
+                    <span>28</span><span>29</span><span>30</span>
+                  </div>
+                  <p class="details">Holidays: 13th (Ganesh Chaturthi), 25th (Anant Chaturdashi)</p>
+                  <p class="reopen">College reopens: 26th September</p>
+                </div>
+
+                <!-- October -->
+                <div class="month">
+                  <h2>October</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
+                    <span>8</span><span class="festival">9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span>
+                    <span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span class="festival">20</span><span>21</span>
+                    <span>22</span><span>23</span><span>24</span><span class="festival">25</span><span>26</span><span>27</span><span>28</span>
+                    <span>29</span><span>30</span><span>31</span>
+                  </div>
+                  <p class="details">Holidays: 9th (Gandhi Jayanti), 20th (Dussehra), 25th (Karva Chauth)</p>
+                  <p class="reopen">College reopens: 27th October</p>
+                </div>
+
+                <!-- November -->
+                <div class="month">
+                  <h2>November</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span class="empty"></span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+                    <span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span>
+                    <span class="festival">14</span><span>15</span><span class="festival">16</span><span>17</span><span>18</span><span>19</span><span>20</span>
+                    <span>21</span><span>22</span><span>23</span><span class="festival">24</span><span>25</span><span>26</span><span>27</span>
+                    <span>28</span><span>29</span><span>30</span>
+                  </div>
+                  <p class="details">Holidays: 14th (Diwali), 16th (Govardhan Puja), 24th (Guru Nanak Jayanti)</p>
+                  <p class="reopen">College reopens: 25th November</p>
+                </div>
+
+                <!-- December -->
+                <div class="month">
+                  <h2>December</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
+                    <span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span>
+                    <span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>21</span>
+                    <span>22</span><span>23</span><span>24</span><span class="festival">25</span><span>26</span><span>27</span><span>28</span>
+                    <span>29</span><span>30</span><span>31</span>
+                  </div>
+                  <p class="details">Holiday: 25th (Christmas)</p>
+                  <p class="reopen">College reopens: 26th December</p>
+                </div>
+
+              </div>
+            </div>
+                `;
+          break;
+
+         case 'attendance':
+contentDiv.innerHTML = `
+    <div class="container7">
+        <h1>Student Attendance</h1>
+        <div class="attendance-toolbar">
+          <div class="attendance-field">
+            <label for="attendanceCourse">Assigned Course</label>
+            <select id="attendanceCourse" required>
+              <option value="">Loading assigned courses...</option>
+            </select>
+          </div>
+          <div class="attendance-field">
+            <label for="attendanceDate">Select Date</label>
+            <input type="date" id="attendanceDate" />
+          </div>
+        </div>
+
+        <div id="attendanceSummary">
+            <span class="totalStudentsCount"><p>Total Students: <span id="totalStudents">0</span></p></span>
+            <span class="presentStudentsCount"><p>Total Present: <span id="totalPresent">0</span></p></span>
+            <span class="absentStudentsCount"><p>Total Absent: <span id="totalAbsent">0</span></p></span>
+
+        </div>
+
+        <div class="attendance-tabs">
+            <button class="attendance-tab-btn active" data-tab="mark" onclick="switchAttendanceTab('mark')">Mark Attendance</button>
+            <button class="attendance-tab-btn" data-tab="view" onclick="switchAttendanceTab('view')">View Records</button>
+        </div>
+
+        <div id="markAttendanceTab">
+            <div class="grid-container" id="attendanceGrid"></div>
+            <div>
+                <button id="attendanceSubmitBtn" class="attendanceSubmit">
+                    Submit Attendance
+                </button>
+            </div>
+        </div>
+
+        <div id="viewAttendanceTab" style="display:none;">
+            <div class="attendance-filters">
+                <input type="date" id="filterDate" />
+                <button id="filterAttendanceBtn" class="attendanceSubmit">Filter</button>
+            </div>
+            <div id="attendanceRecordsList"></div>
+        </div>
+    </div>
+`;
+
+    const AttendanceUrl = "http://localhost:9098/Admin/Admin-Students/section/";
+
+    let students = [];
+    let facultyAssignments = [];
+
+    function getSelectedAssignment() {
+      const courseName = document.getElementById('attendanceCourse')?.value || '';
+      return facultyAssignments.find(course => course.courseName === courseName) || null;
+    }
+
+    function switchAttendanceTab(tab) {
+        document.getElementById('markAttendanceTab').style.display = tab === 'mark' ? 'block' : 'none';
+        document.getElementById('viewAttendanceTab').style.display = tab === 'view' ? 'block' : 'none';
+        document.querySelectorAll('.attendance-tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`.attendance-tab-btn[data-tab="${tab}"]`).classList.add('active');
+
+        if (tab === 'view') {
+            loadAttendanceRecords();
+        }
+    }
+
+    async function loadAttendanceRecords() {
+        const recordsContainer = document.getElementById('attendanceRecordsList');
+        const facultyName = localStorage.getItem('facultyName') || localStorage.getItem('profileName') || 'Faculty';
+        const section = getSelectedAssignment()?.section || '';
+        const course = document.getElementById('attendanceCourse').value.trim() || '';
+        const date = document.getElementById('filterDate').value;
+
+        recordsContainer.innerHTML = '<p>Loading records...</p>';
+
+        try {
+            const params = new URLSearchParams({
+                facultyRegisterNumber: localStorage.getItem('registerNumber') || localStorage.getItem('profileRegNo') || '',
+                section: section,
+                courseName: course
+            });
+            if (date) params.append('date', date);
+
+            const response = await fetch(`${PORTAL_API}/attendance/faculty?${params.toString()}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const records = await response.json();
+            if (!records.length) {
+                recordsContainer.innerHTML = '<p>No attendance records found for the selected criteria.</p>';
+                return;
+            }
+
+            recordsContainer.innerHTML = `
+                <table class="attendance-records-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Student Name</th>
+                            <th>Register No</th>
+                            <th>Student Email</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${records.map(r => `
+                            <tr class="${r.status === 'PRESENT' ? 'row-present' : 'row-absent'}">
+                                <td>${new Date(r.attendanceDate).toLocaleDateString('en-IN')}</td>
+                                <td>${r.studentName}</td>
+                                <td>${r.studentRegisterNumber}</td>
+                                <td>${r.studentEmail || ''}</td>
+                                <td><strong>${r.status}</strong></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        } catch (error) {
+            recordsContainer.innerHTML = `<p style="color:red">Error loading records: ${error.message}</p>`;
+        }
+    }
+
+    document.getElementById('filterAttendanceBtn').onclick = function() {
+        loadAttendanceRecords();
+    };
+
+async function loadAttendanceStudents() {
+  const courseSelect = document.getElementById('attendanceCourse');
+  const assignment = facultyAssignments.find(course => course.courseName === courseSelect.value);
+  if (!assignment) {
+    students = [];
+    renderAttendanceGrid(document.getElementById('attendanceDate').value);
+    return;
+  }
+
+  fetch(AttendanceUrl + encodeURIComponent(assignment.section))
+        .then(response => response.json())
+        .then(data => {
+            students = data.map(s => ({
+                name: s.name,
+                email: s.email,
+                regNo: s.registerNo
+            }));
+
+            const selectedDate = document.getElementById('attendanceDate').value;
+            renderAttendanceGrid(selectedDate);
+        })
+        .catch(err => console.error("Error fetching students: ", err));
+    }
+
+    async function loadAssignedAttendanceCourses() {
+      const registerNumber = localStorage.getItem('registerNumber') || localStorage.getItem('profileRegNo') || '';
+      const courseSelect = document.getElementById('attendanceCourse');
+      if (!registerNumber || !courseSelect) return;
+
+      try {
+        const response = await fetch(`${FACULTY_COURSE_API}/by-registration/${encodeURIComponent(registerNumber)}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        facultyAssignments = await response.json();
+        courseSelect.innerHTML = facultyAssignments.length
+          ? facultyAssignments.map(course => `<option value="${escapeHtml(course.courseName)}">${escapeHtml(course.courseName)} - ${escapeHtml(course.section)}</option>`).join('')
+          : '<option value="">No courses assigned</option>';
+        await loadAttendanceStudents();
+      } catch (error) {
+        courseSelect.innerHTML = '<option value="">Unable to load assigned courses</option>';
+        console.error('Error loading assigned faculty courses:', error);
+      }
+    }
+
+    document.getElementById('attendanceCourse').addEventListener('change', loadAttendanceStudents);
+
+// Helper functions
+function getAttendanceKey(dateStr) {
+    const section = getSelectedAssignment()?.section || '';
+    const course = document.getElementById('attendanceCourse').value.trim() || 'Course';
+    return `attendance_${section}_${course}_${dateStr}`;
+}
+
+function getTodayStr() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function isFuture(dateStr) {
+    return dateStr > getTodayStr();
+}
+
+function loadAttendance(dateStr) {
+    const key = getAttendanceKey(dateStr);
+    const data = localStorage.getItem(key);
+
+    if (data) return JSON.parse(data);
+
+    return students.map(() => false);
+}
+
+function saveAttendance(dateStr, attendanceArr) {
+    if (isFuture(dateStr)) return;
+    localStorage.setItem(getAttendanceKey(dateStr), JSON.stringify(attendanceArr));
+}
+
+// ✅ RENDER GRID
+function renderAttendanceGrid(dateStr) {
+    const grid = document.getElementById('attendanceGrid');
+    grid.innerHTML = '';
+
+    const attendanceArr = loadAttendance(dateStr);
+
+    students.forEach((student, idx) => {
+        const present = attendanceArr[idx];
+
+        const btn = document.createElement('button');
+        btn.className = present ? 'status-present' : 'status-absent';
+
+        btn.innerHTML = `
+            <div>Name: ${student.name}</div>
+            <div>Email: ${student.email}</div>
+            <div>Reg No: ${student.regNo}</div>
+        `;
+
+        if (!isFuture(dateStr)) {
+            btn.onclick = function () {
+                attendanceArr[idx] = !attendanceArr[idx];
+                saveAttendance(dateStr, attendanceArr);
+                renderAttendanceGrid(dateStr);
+            };
+        } else {
+            btn.disabled = true;
+        }
+
+        const block = document.createElement('div');
+        block.className = 'student-block';
+        block.appendChild(btn);
+
+        grid.appendChild(block);
+    });
+
+    updateAttendanceSummary(attendanceArr);
+}
+
+// ✅ SUMMARY
+function updateAttendanceSummary(attendanceArr) {
+    const total = students.length;
+    const present = attendanceArr.filter(Boolean).length;
+
+    document.getElementById('totalStudents').textContent = total;
+    document.getElementById('totalPresent').textContent = present;
+    document.getElementById('totalAbsent').textContent = total - present;
+}
+
+// ✅ DATE INIT
+const dateInput = document.getElementById('attendanceDate');
+const todayStr = getTodayStr();
+dateInput.value = todayStr;
+
+loadAssignedAttendanceCourses();
+
+// DATE CHANGE
+dateInput.addEventListener('change', function () {
+    renderAttendanceGrid(this.value);
+});
+
+// Submit attendance to the application backend.
+document.getElementById('attendanceSubmitBtn').onclick = async function () {
+    if (isFuture(dateInput.value)) {
+        alert('Cannot submit attendance for a future date.');
+        return;
+    }
+
+    const courseName = document.getElementById('attendanceCourse').value.trim();
+    const assignment = facultyAssignments.find(course => course.courseName === courseName);
+    const facultyRegisterNumber = localStorage.getItem('registerNumber') || localStorage.getItem('profileRegNo') || '';
+
+    if (!assignment) {
+      alert('Please select one of your assigned courses.');
+        return;
+    }
+
+    if (!facultyRegisterNumber) {
+        alert('Faculty register number is missing. Please login again.');
+        return;
+    }
+
+    const attendanceArr = loadAttendance(dateInput.value);
+    const payload = {
+        courseName,
+        courseCode: assignment.courseCode || null,
+        section: assignment.section,
+        facultyName: localStorage.getItem('facultyName') || localStorage.getItem('profileName') || 'Faculty',
+        facultyRegisterNumber,
+        attendanceDate: dateInput.value,
+        students: students.map((student, index) => ({
+            studentName: student.name,
+            studentRegisterNumber: student.regNo,
+            studentEmail: student.email,
+            status: attendanceArr[index] ? 'PRESENT' : 'ABSENT'
+        }))
+    };
+
+    try {
+        const response = await fetch(`${PORTAL_API}/attendance/mark`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(text || `HTTP ${response.status}`);
+        }
+
+        alert('Attendance submitted for ' + dateInput.value);
+    } catch (error) {
+        alert('Attendance submit failed: ' + error.message);
+    }
+};
+
+break;
+
+
+        case 'faculty_email':
+            contentDiv.innerHTML = `
+              <div class="container9">
+                <h1>Send to Faculty</h1>
+                <div class="mail-workspace">
+                <form id="facultyEmailForm" class="email-form">
+                  <select name="recipientRole" required>
+                    <option value="STUDENT">Student</option>
+                    <option value="FACULTY">Faculty</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                  <input type="text" placeholder="Recipient Name" name="recipientName" required />
+                  <input type="text" placeholder="Recipient ID / Register Number" name="recipientId" required />
+                  <input type="text" placeholder="Subject" name="subject" required />
+                  <textarea name="description" rows="8" placeholder="Write your message..." required></textarea>
+                  <div id="attached-files-faculty" class="attached-files"></div>
+                  
+                  <button type="submit" class="btn-icon" title="Send Email">
+                    <img src="./Images/mail_Icons/send.png"> Send
+                  </button><br>
+
+                  <div class="email-actions">
+                    <label class="btn-icons" title="Attach Files">
+                      <img src="./Images/mail_Icons/file.png"> File
+                      <input type="file" id="file-input-faculty" style="display: none;" multiple />
+                    </label>
+                    <button type="button" class="btn-icons share-btn" title="Share" disabled>
+                      <img src="./Images/mail_Icons/share.png"> Share
+                    </button>
+                    <button type="button" class="btn-icons draft-btn" title="Save Draft">
+                      <img src="./Images/mail_Icons/drafts.png"> Draft
+                      <span class="draft-count" id="draft-count-faculty">0</span>
+                    </button>
+                    <button type="button" class="btn-icons inbox-btn" title="Check All Mails">
+                      <img src="./Images/mail_Icons/inbox.png"> All Mails
+                    </button>
+                    <button type="reset" class="btn-icons" title="Clear Form">
+                      <img src="./Images/mail_Icons/cancle.png"> Cancel
+                    </button>
+                  </div>
+                </form>
+                <div id="faculty-mailbox" class="draft-list"></div>
+                </div>
+                <div id="image-modal-faculty" class="modal" style="display: none;">
+                  <button class="modal-close">×</button>
+                  <img id="modal-image-faculty" class="modal-content">
+                </div>
+                <div id="share-modal-faculty" class="modal" style="display: none;">
+                  <div class="modal-content">
+                    <button class="modal-close" id="share-modal-close-faculty" title="Cancel">X</button>
+                    <h2>Share Message</h2>
+                    <div class="share-options">
+                      <button class="share-option whatsapp" data-platform="whatsapp">
+                        <i class="fab fa-whatsapp"></i>
+                      </button>
+                      <button class="share-option x" data-platform="x">
+                        <i class="fab fa-x-twitter"></i>
+                      </button>
+                      <button class="share-option gmail" data-platform="gmail">
+                        <i class="fas fa-envelope"></i>
+                      </button>
+                      <button class="share-option outlook" data-platform="outlook">
+                        <i class="fas fa-envelope-open-text"></i>
+                      </button>
+                    </div>
+                    <button id="share-confirm-faculty" class="btn-icon">Share</button>
+                  </div>
+                </div>
+                <div id="draft-modal-faculty" class="modal draft-modal" style="display: none;">
+                  <div class="modal-content">
+                    <button class="modal-close" id="draft-modal-close-faculty" title="Cancel">X</button>
+                    <h2>Saved Drafts</h2>
+                    <div id="draft-list-faculty" class="draft-list"></div>
+                  </div>
+                </div>
+              </div>
+            `;
+            setupFacultyEmailLogic('facultyEmailForm', 'file-input-faculty', 'attached-files-faculty', setupShareLogicFaculty);
+            break;
+
+          
+          case 'profile':
+            const name = localStorage.getItem('profileName') || 'N/A';
+            const regNo = localStorage.getItem('profileRegNo') || 'N/A';
+            const phone = localStorage.getItem('profilePhone') || 'N/A';
+            const imgSrc = localStorage.getItem('profileImage');
+
+            contentDiv.innerHTML = `
+              <div class="profile" id="profileDisplay">
+                <h1>PROFILE</h1>
+                <div id="profileImageSpace">${imgSrc ? `<img src="${imgSrc}" alt="Profile Image" style="max-width: 150px; border-radius: 8px;"/>` : 'No image selected'}</div>
+                <p>Name: <span id="profileName">Loading...</span></p>
+                <p>Email: <span id="profileEmail">Loading...</span></p>
+                <p>Registration Number: <span id="profileRegNo">Loading...</span></p>
+                <p>Section: <span id="profileSection">Loading...</span></p>
+                <p>Phone Number: <span id="profilePhone">${phone}</span></p>
+
+                <div>
+                  <button class="button" onclick="location.href='FacultyEditProfile.html'">Edit Profile</button>
+                  <button class="button" onclick="location.href='./Form/Login.html'">LogIn</button>
+                </div>
+              </div>
+            `;
+            refreshFacultyProfile();
+            break;
+
+        case 'logout':
+          localStorage.clear();
+          window.location.href = './Form/Login.html';
+          contentDiv.innerHTML = `
+            <h2>Logout</h2>
+            <p>You have been logged out. Thank you!</p>
+          `;
+          break;
+
+        default:
+          contentDiv.innerHTML = `
+            <h2>Welcome to Presidency University</h2>
+            <p>Please select a section from the menu.</p>
+          `;
+          break;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const links = document.querySelectorAll('.nav-link');
+
+      links.forEach(link => {
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          const contentId = link.getAttribute('data-content');
+          loadContent(contentId);
+        });
+      });
+
+      loadContent('home');
+    });
+
+    function toggleAttendance(button) {
+      if (button.classList.contains('status-absent')) {
+          button.classList.remove('status-absent');
+          button.classList.add('status-present');
+      } else {
+          button.classList.remove('status-present');
+          button.classList.add('status-absent');
+      }
+      updateAttendanceSummary();
+    }
+
+    function updateAttendanceSummary() {
+        const presentButtons = document.querySelectorAll('.status-present').length;
+        const absentButtons = document.querySelectorAll('.status-absent').length;
+        
+        document.getElementById('totalPresent').textContent = presentButtons;
+        document.getElementById('totalAbsent').textContent = absentButtons;
+    }
+
+    // Initialize the attendance summary
+    updateAttendanceSummary();
+
+    //Timetable
+    async function loadMyTimetable() {
+      const loadingEl = document.getElementById('loading-timetable');
+      const container = document.getElementById('timetableContainer');
+      const noDataEl = document.getElementById('no-timetable');
+      const facultyDisplay = document.getElementById('facultyNameDisplay');
+
+      try {
+          const token = localStorage.getItem('authToken');
+          if (!token) throw new Error("Please login first");
+
+          const facultyName = localStorage.getItem('facultyName') || "Faculty";
+          facultyDisplay.textContent = `Faculty: ${facultyName}`;
+
+          const response = await fetch(
+              `http://localhost:9099/Admin/Admin_Faculty_Timetable/getByFaculty?facultyName=${encodeURIComponent(facultyName)}`
+          );
+
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+          const timetableData = await response.json();
+
+          loadingEl.style.display = 'none';
+
+          if (!timetableData || timetableData.length === 0) {
+              noDataEl.style.display = 'block';
+              container.innerHTML = '';
+              return;
+          }
+
+          container.innerHTML = '';   // Clear previous content
+
+          // Group data by Program Name
+          const programMap = {};
+          timetableData.forEach(item => {
+              const prog = item.programName || "Unknown Program";
+              if (!programMap[prog]) programMap[prog] = {};
+              programMap[prog][item.day] = item;
+          });
+
+          const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+
+          Object.keys(programMap).forEach(programName => {
+              const daysMap = programMap[programName];
+
+              // Create a section for each program
+              const sectionHTML = `
+                  <div class="program-section" style="margin-bottom: 40px;">
+                      <h3 style="color:#1976d2; margin-bottom:10px;">${programName}</h3>
+                      <table class="table">
+                          <thead>
+                              <tr>
+                                  <th>Day</th>
+                                  <th>Slot 1</th>
+                                  <th>Slot 2</th>
+                                  <th>Slot 3</th>
+                                  <th>Slot 4</th>
+                                  <th>Slot 5</th>
+                                  <th>Slot 6</th>
+                                  <th>Slot 7</th>
+                                  <th>Slot 8</th>
+                                  <th>Slot 9</th>
+                                  <th>Slot 10</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+              `;
+
+              let tableBody = '';
+              daysOrder.forEach(day => {
+                  const data = daysMap[day] || {};
+                  tableBody += `
+                      <tr>
+                          <td><strong>${day}</strong></td>
+                          <td>${data.slot1 || ''}</td>
+                          <td>${data.slot2 || ''}</td>
+                          <td>${data.slot3 || ''}</td>
+                          <td>${data.slot4 || ''}</td>
+                          <td>${data.slot5 || ''}</td>
+                          <td>${data.slot6 || ''}</td>
+                          <td>${data.slot7 || ''}</td>
+                          <td>${data.slot8 || ''}</td>
+                          <td>${data.slot9 || ''}</td>
+                          <td>${data.slot10 || ''}</td>
+                      </tr>
+                  `;
+              });
+
+              const fullSection = sectionHTML + tableBody + `</tbody></table></div>`;
+              container.innerHTML += fullSection;
+          });
+
+      } catch (error) {
+          console.error(error);
+          loadingEl.innerHTML = `<p style="color:red">Error loading timetable: ${error.message}</p>`;
+      }
+    }
+    
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('showProfile')) {
+        loadContent('profile');
+      } else {
+        loadContent('home');
+      }
+      updateHeaderProfile();
+
+      // Sidebar menu toggle for responsiveness
+      const menuToggle = document.getElementById('menuToggle');
+      const navbar = document.querySelector('.navbar');
+      if (menuToggle && navbar) {
+        menuToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          navbar.classList.toggle('active');
+        });
+        document.addEventListener('click', (e) => {
+          if (!navbar.contains(e.target) && e.target !== menuToggle) {
+            navbar.classList.remove('active');
+          }
+        });
+      }
+    });
+
+    function updateHeaderProfile() {
+      const name = localStorage.getItem('profileName');
+      const imgSrc = localStorage.getItem('profileImage');
+
+      const img = document.getElementById('headerProfileImg');
+      const nameSpan = document.getElementById('headerProfileName');
+
+      if (img && imgSrc) {
+        img.src = imgSrc;
+        img.style.display = 'inline-block';
+      } else if (img) {
+        img.style.display = 'none';
+      }
+
+      if (nameSpan && name) {
+        nameSpan.textContent = name;
+      } else if (nameSpan) {
+        nameSpan.textContent = '';
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', function () {
+      updateHeaderProfile();
+
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('showProfile') === '1') {
+        loadSection('profile');
+      }
+    });
+
+    
+    function getCurrentFacultyIdentity() {
+      return {
+        role: 'FACULTY',
+        name: localStorage.getItem('facultyName') || localStorage.getItem('profileName') || 'Faculty',
+        id: localStorage.getItem('registerNumber') || localStorage.getItem('profileRegNo') || ''
+      };
+    }
+
+    async function sendInternalMail(form, files, sender) {
+      const attachments = await Promise.all(files.map(file => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve({ fileName: file.name, contentType: file.type || 'application/octet-stream', size: file.size, data: reader.result });
+        reader.onerror = () => reject(new Error(`Unable to read attachment ${file.name}`));
+        reader.readAsDataURL(file);
+      })));
+      const payload = {
+        senderRole: sender.role,
+        senderName: sender.name,
+        senderId: sender.id,
+        recipientRole: form.querySelector('[name="recipientRole"]').value,
+        recipientName: form.querySelector('[name="recipientName"]').value,
+        recipientId: form.querySelector('[name="recipientId"]').value,
+        subject: form.querySelector('[name="subject"]').value,
+        body: form.querySelector('[name="description"]').value,
+        attachments
+      };
+
+      if (!payload.senderId) {
+        throw new Error('Your faculty register number is missing. Please login again before sending mail.');
+      }
+
+      const response = await fetch(`${PORTAL_API}/mail/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `HTTP ${response.status}`);
+      }
+    }
+
+    async function loadMailbox(role, id, containerId) {
+      const container = document.getElementById(containerId);
+      if (!id) {
+        container.innerHTML = '<p>Please login again to view your mailbox.</p>';
+        return;
+      }
+
+      try {
+        const response = await fetch(`${PORTAL_API}/mail/inbox?role=${encodeURIComponent(role)}&id=${encodeURIComponent(id)}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const messages = await response.json();
+        container.innerHTML = messages.length ? messages.map(message => `
+          <div class="draft-item">
+            <strong>${escapeHtml(message.subject)}</strong>
+            <p>${escapeHtml(message.body)}</p>
+            <small>From ${escapeHtml(message.senderName)} (${escapeHtml(message.senderId)}) - ${new Date(message.createdAt).toLocaleString()}</small>
+          </div>
+        `).join('') : '<p>No application mails yet.</p>';
+      } catch (error) {
+        container.innerHTML = `<p style="color:red">Unable to load mailbox: ${escapeHtml(error.message)}</p>`;
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    // Logic for Faculty Email
+    function setupFacultyEmailLogic(formId, fileInputId, attachedFilesId, setupShareLogicCallback) {
+      // Get DOM elements
+      const fileInputFaculty = document.getElementById(fileInputId);
+      const attachedFilesDivFaculty = document.getElementById(attachedFilesId);
+      const formFaculty = document.getElementById(formId);
+      const modalFaculty = document.getElementById('image-modal-faculty');
+      const modalImageFaculty = document.getElementById('modal-image-faculty');
+      const modalCloseFaculty = document.querySelector('#image-modal-faculty .modal-close');
+      const shareButtonFaculty = formFaculty.querySelector('.share-btn');
+      const draftButtonFaculty = formFaculty.querySelector('.draft-btn');
+      const draftCountFaculty = document.getElementById('draft-count-faculty');
+      const draftModalFaculty = document.getElementById('draft-modal-faculty');
+      const draftModalCloseFaculty = document.getElementById('draft-modal-close-faculty');
+      const draftListFaculty = document.getElementById('draft-list-faculty');
+      let facultyHomeFiles = [];
+      let facultyHomeDrafts = JSON.parse(localStorage.getItem('facultyHomeEmailDrafts')) || [];
+      let isSendingFacultyHome = false;
+      const facultyHomePreviewUrls = new Map();
+
+      // Update draft count badge
+      function updateDraftCountFacultyHome() {
+        draftCountFaculty.textContent = facultyHomeDrafts.length;
+        draftCountFaculty.style.display = facultyHomeDrafts.length > 0 ? 'inline-block' : 'none';
+      }
+
+      // Initialize draft count
+      updateDraftCountFacultyHome();
+
+      // Update share button state
+      function updateShareButtonStateFacultyHome() {
+        const subject = formFaculty.querySelector('input[name="subject"]').value.trim();
+        const description = formFaculty.querySelector('textarea[name="description"]').value.trim();
+        shareButtonFaculty.disabled = !(subject || description || facultyHomeFiles.length > 0);
+      }
+
+      // Convert file to base64
+      async function convertToBase64FacultyHome(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('Failed to read file'));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // Convert base64 to File
+      function base64ToFileFacultyHome(base64, filename, mimeType) {
+        const byteString = atob(base64.split(',')[1]);
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        return new File([ab], filename, { type: mimeType });
+      }
+
+      // Save draft
+      async function saveDraftFacultyHome() {
+        const subject = formFaculty.querySelector('input[name="subject"]').value.trim();
+        const description = formFaculty.querySelector('textarea[name="description"]').value.trim();
+        if ((subject || description || facultyHomeFiles.length > 0) && !isSendingFacultyHome) {
+          const fileData = await Promise.all(
+            facultyHomeFiles.map(async file => ({
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              data: await convertToBase64FacultyHome(file)
+            }))
+          );
+          const draft = {
+            id: Date.now(),
+            subject,
+            description,
+            files: fileData,
+            timestamp: new Date().toISOString()
+          };
+          facultyHomeDrafts = facultyHomeDrafts.filter(d => d.subject !== subject || d.description !== description);
+          facultyHomeDrafts.push(draft);
+          localStorage.setItem('facultyHomeEmailDrafts', JSON.stringify(facultyHomeDrafts));
+          updateDraftCountFacultyHome();
+        }
+      }
+
+      // Display drafts
+      function displayDraftsFacultyHome() {
+        draftListFaculty.innerHTML = '';
+        facultyHomeDrafts.forEach((draft, index) => {
+          const draftElement = document.createElement('div');
+          draftElement.classList.add('draft-item');
+          const fileNames = draft.files.map(file => file.name).join(', ');
+          const descriptionPreview = draft.description ? draft.description.split('\n')[0].substring(0, 50) + (draft.description.length > 50 ? '...' : '') : 'No Content';
+          draftElement.innerHTML = `
+            <div class="draft-content">
+              <strong>${draft.subject || 'No Subject'}</strong>
+              <p>${descriptionPreview}</p>
+              ${draft.files.length > 0 ? `<small>Files: ${fileNames}</small>` : ''}
+              <small>${new Date(draft.timestamp).toLocaleString()}</small>
+            </div>
+            <div class="draft-actions">
+              <button class="load-draft" data-index="${index}">re-write</button>
+              <button class="delete-draft" data-index="${index}">Delete</button>
+            </div>
+          `;
+          draftListFaculty.appendChild(draftElement);
+        });
+
+        // Event listeners for draft actions
+        draftListFaculty.addEventListener('click', async (e) => {
+          const loadButton = e.target.closest('.load-draft');
+          const deleteButton = e.target.closest('.delete-draft');
+          if (loadButton) {
+            const index = parseInt(loadButton.dataset.index, 10);
+            const draft = facultyHomeDrafts[index];
+            formFaculty.querySelector('input[name="subject"]').value = draft.subject || '';
+            formFaculty.querySelector('textarea[name="description"]').value = draft.description || '';
+            facultyHomeFiles = await Promise.all(
+              draft.files.map(file => base64ToFileFacultyHome(file.data, file.name, file.type))
+            );
+            updateAttachedFilesDisplayFacultyHome();
+            updateShareButtonStateFacultyHome();
+            draftModalFaculty.style.display = 'none';
+          }
+          if (deleteButton) {
+            const index = parseInt(deleteButton.dataset.index, 10);
+            facultyHomeDrafts.splice(index, 1);
+            localStorage.setItem('facultyHomeEmailDrafts', JSON.stringify(facultyHomeDrafts));
+            updateDraftCountFacultyHome();
+            displayDraftsFacultyHome();
+          }
+        });
+      }
+
+      // Handle file selection
+      fileInputFaculty.addEventListener('change', (event) => {
+        const files = Array.from(event.target.files);
+        facultyHomeFiles = [...facultyHomeFiles, ...files];
+        updateAttachedFilesDisplayFacultyHome();
+        updateShareButtonStateFacultyHome();
+      });
+
+      // Update attached files display
+      function updateAttachedFilesDisplayFacultyHome() {
+        attachedFilesDivFaculty.innerHTML = '';
+        facultyHomePreviewUrls.forEach(url => URL.revokeObjectURL(url));
+        facultyHomePreviewUrls.clear();
+
+        facultyHomeFiles.forEach((file, index) => {
+          const fileElement = document.createElement('div');
+          fileElement.classList.add('file-item');
+
+          let previewUrl, isImage, fileTypeClass;
+          if (file.type.startsWith('image/')) {
+            previewUrl = URL.createObjectURL(file);
+            facultyHomePreviewUrls.set(index, previewUrl);
+            isImage = true;
+            fileTypeClass = 'image';
+          } else if (file.type === 'application/pdf') {
+            previewUrl = '../Images/mail_Icons/pdf.png';
+            isImage = false;
+            fileTypeClass = 'pdf';
+          } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            previewUrl = '../Images/mail_Icons/docx.png';
+            isImage = false;
+            fileTypeClass = 'docx';
+          } else {
+            previewUrl = '../Images/mail_Icons/txt.png';
+            isImage = false;
+            fileTypeClass = 'generic';
+          }
+
+          const fileName = file.name.length > 20 ? file.name.substring(0, 17) + '...' : file.name;
+
+          fileElement.innerHTML = `
+            <div class="file-preview ${fileTypeClass}">
+              <img src="${previewUrl}" alt="File preview" class="attached-img">
+              <div class="file-overlay">
+                <button type="button" class="view-file" data-index="${index}" data-is-image="${isImage}">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button type="button" class="remove-file" data-index="${index}">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <span class="file-name">${fileName}</span>
+            </div>
+          `;
+          attachedFilesDivFaculty.appendChild(fileElement);
+        });
+
+        // Event delegation for view and remove buttons
+        attachedFilesDivFaculty.addEventListener('click', (e) => {
+          const viewButton = e.target.closest('.view-file');
+          const removeButton = e.target.closest('.remove-file');
+
+          if (viewButton) {
+            const index = parseInt(viewButton.dataset.index, 10);
+            const isImage = viewButton.dataset.isImage === 'true';
+            const file = facultyHomeFiles[index];
+
+            if (isImage) {
+              modalImageFaculty.src = URL.createObjectURL(file);
+              modalFaculty.style.display = 'flex';
+            } else {
+              const url = URL.createObjectURL(file);
+              window.open(url, '_blank');
+              setTimeout(() => URL.revokeObjectURL(url), 0);
+            }
+          }
+
+          if (removeButton) {
+            const index = parseInt(removeButton.dataset.index, 10);
+            if (facultyHomePreviewUrls.has(index)) {
+              URL.revokeObjectURL(facultyHomePreviewUrls.get(index));
+              facultyHomePreviewUrls.delete(index);
+            }
+            facultyHomeFiles.splice(index, 1);
+            updateAttachedFilesDisplayFacultyHome();
+            updateShareButtonStateFacultyHome();
+          }
+        });
+      }
+
+      // Save draft on page unload
+      window.addEventListener('beforeunload', async () => {
+        if (!isSendingFacultyHome) {
+          await saveDraftFacultyHome();
+        }
+      });
+
+      // Open draft modal
+      draftButtonFaculty.addEventListener('click', () => {
+        displayDraftsFacultyHome();
+        draftModalFaculty.style.display = 'flex';
+      });
+
+      // Close draft modal
+      draftModalCloseFaculty.addEventListener('click', () => {
+        draftModalFaculty.style.display = 'none';
+      });
+
+      draftModalFaculty.addEventListener('click', (e) => {
+        if (e.target === draftModalFaculty) {
+          draftModalFaculty.style.display = 'none';
+        }
+      });
+
+      // Close image modal
+      modalCloseFaculty.addEventListener('click', () => {
+        modalFaculty.style.display = 'none';
+        URL.revokeObjectURL(modalImageFaculty.src);
+      });
+
+      modalFaculty.addEventListener('click', (e) => {
+        if (e.target === modalFaculty) {
+          modalFaculty.style.display = 'none';
+          URL.revokeObjectURL(modalImageFaculty.src);
+        }
+      });
+
+      // Handle form submission
+      formFaculty.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        isSendingFacultyHome = true;
+        try {
+          await sendInternalMail(formFaculty, facultyHomeFiles, getCurrentFacultyIdentity());
+          facultyHomeDrafts = facultyHomeDrafts.filter(d => d.subject !== formFaculty.querySelector('input[name="subject"]').value ||
+                                                  d.description !== formFaculty.querySelector('textarea[name="description"]').value);
+          localStorage.setItem('facultyHomeEmailDrafts', JSON.stringify(facultyHomeDrafts));
+          updateDraftCountFacultyHome();
+          formFaculty.reset();
+          facultyHomeFiles = [];
+          updateAttachedFilesDisplayFacultyHome();
+          updateShareButtonStateFacultyHome();
+          alert('Mail sent inside the application.');
+        } catch (error) {
+          alert(`Mail failed: ${error.message}`);
+        } finally {
+          isSendingFacultyHome = false;
+        }
+      });
+
+      formFaculty.querySelector('.inbox-btn').addEventListener('click', () => {
+        const faculty = getCurrentFacultyIdentity();
+        loadMailbox(faculty.role, faculty.id, 'faculty-mailbox');
+      });
+
+      // Clear attached files on form reset
+      formFaculty.addEventListener('reset', () => {
+        facultyHomeFiles = [];
+        facultyHomePreviewUrls.forEach(url => URL.revokeObjectURL(url));
+        facultyHomePreviewUrls.clear();
+        updateAttachedFilesDisplayFacultyHome();
+        updateShareButtonStateFacultyHome();
+      });
+
+      // Initialize share button
+      updateShareButtonStateFacultyHome();
+
+      // Set up share logic
+      setupShareLogicCallback(facultyHomeFiles);
+    }
+
+    // Share logic for Faculty Email
+    function setupShareLogicFaculty(facultyFiles) {
+      // Page-specific variables for facultyHome
+      const facultyForm = document.getElementById('facultyEmailForm');
+      const facultyShareButton = facultyForm.querySelector('.share-btn');
+      const facultyShareModal = document.getElementById('share-modal-faculty');
+      const facultyCloseModal = document.getElementById('share-modal-close-faculty');
+      const facultyShareConfirm = document.getElementById('share-confirm-faculty');
+      const facultyShareOptions = document.querySelectorAll('#share-modal-faculty .share-option');
+      let facultySelectedPlatform = null;
+
+      // Convert file to base64 (page-specific function)
+      async function convertToBase64Faculty(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('Failed to read file'));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // Open share modal
+      facultyShareButton.addEventListener('click', () => {
+        const subject = facultyForm.querySelector('input[name="subject"]').value.trim();
+        const description = facultyForm.querySelector('textarea[name="description"]').value.trim();
+        if (!subject && !description && facultyFiles.length === 0) {
+          alert('Please add a subject, description, or file to share.');
+          return;
+        }
+        if (!facultyShareButton.disabled) {
+          facultyShareModal.style.display = 'flex';
+        }
+      });
+
+      // Close share modal
+      facultyCloseModal.addEventListener('click', () => {
+        facultyShareModal.style.display = 'none';
+        facultySelectedPlatform = null;
+        facultyShareOptions.forEach(option => option.classList.remove('selected'));
+      });
+
+      facultyShareModal.addEventListener('click', (e) => {
+        if (e.target === facultyShareModal) {
+          facultyShareModal.style.display = 'none';
+          facultySelectedPlatform = null;
+          facultyShareOptions.forEach(option => option.classList.remove('selected'));
+        }
+      });
+
+      // Select platform
+      facultyShareOptions.forEach(option => {
+        option.addEventListener('click', () => {
+          facultyShareOptions.forEach(opt => opt.classList.remove('selected'));
+          option.classList.add('selected');
+          facultySelectedPlatform = option.getAttribute('data-platform');
+        });
+      });
+
+      // Handle share confirmation
+      facultyShareConfirm.addEventListener('click', async () => {
+        if (!facultySelectedPlatform) {
+          alert('Please select a platform to share.');
+          return;
+        }
+
+        const facultySubject = facultyForm.querySelector('input[name="subject"]').value || 'No Subject';
+        const facultyDescription = facultyForm.querySelector('textarea[name="description"]').value || 'No Description';
+        let facultyShareText = `${facultySubject}\n\n${facultyDescription}`;
+
+        let facultyFileLinks = '';
+        let facultyFilesToShare = [];
+        if (facultyFiles.length > 0) {
+          facultyFileLinks = '\n\nAttached Files:\n';
+          facultyFilesToShare = await Promise.all(
+            facultyFiles.map(async file => {
+              try {
+                if (file.size > 5 * 1024 * 1024) { // 5MB limit for sharing
+                  facultyFileLinks += `${file.name}: [File too large to share]\n`;
+                  return null;
+                }
+                const fileDataUrl = await convertToBase64Faculty(file);
+                facultyFileLinks += `${file.name}: [Attachment]\n`;
+                return { file, dataUrl: fileDataUrl };
+              } catch (error) {
+                console.error('Error converting file to data URL:', error);
+                facultyFileLinks += `${file.name}: [Error processing file]\n`;
+                return null;
+              }
+            })
+          );
+          facultyFilesToShare = facultyFilesToShare.filter(file => file !== null);
+        }
+
+        facultyShareText += facultyFileLinks;
+
+        switch (facultySelectedPlatform) {
+          case 'whatsapp':
+            if (facultyShareText.length > 2000) {
+              alert('Content exceeds WhatsApp character limit (2000). Please shorten the message.');
+              return;
+            }
+            if ('share' in navigator && facultyFilesToShare.length > 0) {
+              const shareData = {
+                title: facultySubject,
+                text: facultyDescription,
+                files: facultyFilesToShare.map(item => item.file)
+              };
+              try {
+                await navigator.share(shareData);
+              } catch (error) {
+                console.error('Error sharing via Web Share API:', error);
+                alert('Failed to share via WhatsApp. Please try again.');
+              }
+            } else {
+              const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(facultyShareText)}`;
+              window.open(whatsappUrl, '_blank');
+            }
+            break;
+
+          case 'x':
+            if (facultyShareText.length > 280) {
+              alert('Content exceeds X character limit (280). Please shorten the message.');
+              return;
+            }
+            const xUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(facultyShareText)}`;
+            window.open(xUrl, '_blank');
+            break;
+
+          case 'gmail':
+            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(facultySubject)}&body=${encodeURIComponent(facultyShareText)}`;
+            window.open(gmailUrl, '_blank');
+            break;
+
+          case 'outlook':
+            const outlookUrl = `https://outlook.live.com/mail/0/deeplink/compose?subject=${encodeURIComponent(facultySubject)}&body=${encodeURIComponent(facultyShareText)}`;
+            window.open(outlookUrl, '_blank');
+            break;
+
+          default:
+            alert('Invalid platform selected.');
+            return;
+        }
+
+        facultyShareModal.style.display = 'none';
+        facultySelectedPlatform = null;
+        facultyShareOptions.forEach(option => option.classList.remove('selected'));
+      });
+    }
+
+
+    //Home
+    async function loadMyCourses() {
+    const loadingEl = document.getElementById('loading');
+    const gridEl = document.getElementById('course-grid');
+    const noCoursesEl = document.getElementById('no-courses');
+
+    // Safety checks
+    if (!loadingEl || !gridEl || !noCoursesEl) {
+        console.error("Required elements not found in DOM. Check your HTML IDs.");
+        return;
+    }
+
+    const registerNumber = localStorage.getItem('registerNumber') || localStorage.getItem('profileRegNo');
+    if (!registerNumber) {
+        loadingEl.style.display = 'none';
+        noCoursesEl.style.display = 'block';
+        return;
+    }
+
+    try {
+        loadingEl.style.display = 'block';
+        gridEl.style.display = 'none';
+        noCoursesEl.style.display = 'none';
+
+        const response = await fetch(`${FACULTY_COURSE_API}/by-registration/${encodeURIComponent(registerNumber)}`);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const courses = await response.json();
+
+        loadingEl.style.display = 'none';
+
+        if (!courses || courses.length === 0) {
+            noCoursesEl.style.display = 'block';
+            gridEl.style.display = 'none';
+            return;
+        }
+
+        // Show courses
+        gridEl.style.display = 'grid';
+        noCoursesEl.style.display = 'none';
+
+        let html = '';
+        courses.forEach(course => {
+            html += `
+                <div class="course-card">
+                    <h4>${course.courseName || 'N/A'}</h4>
+                    <p><strong>Section:</strong> ${course.section || 'N/A'}</p>
+                    <p><strong>Reg No:</strong> ${course.registrationNumber || 'N/A'}</p>
+                </div>
+            `;
+        });
+
+        gridEl.innerHTML = html;
+
+    } catch (error) {
+        console.error("Error loading courses:", error);
+        loadingEl.style.display = 'none';
+        noCoursesEl.style.display = 'block';
+        noCoursesEl.innerHTML = `<p style="color:red">Failed to load courses: ${error.message}</p>`;
+    }
+}
+  
+  </script>
+</head>
+<body>
+  <div class="container">
+    <nav class="navbar">
+      <div class="logo-container">
+        <img src="./Images/PresidencyImages/logo.png" alt="Presidency Logo" class="logo">
+      </div>
+      <ul class="nav-list">
+        <li>
+          <a href="#" class="nav-link" data-content="home">
+            <span class="home">Home</span>
+            <img src="./Images/home.png" alt="Home Icon" class="nav-icon">
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-link" data-content="timetable">
+            <span class="timetable">Timetables</span>
+            <img src="./Images/timetable.png" alt="Timetable Icon" class="nav-icon">
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-link" data-content="academic_calendar">
+            <span class="AcademicCalendar">Academic Calendar</span>
+            <img src="./Images/calendar.png" alt="Academic Calendar Icon" class="nav-icon">
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-link" data-content="attendance">
+            <span class="Attendance">Attendance</span>
+            <img src="./Images/attendance.png" alt="Attendance Icon" class="nav-icon">
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-link" data-content="faculty_email">
+            <span class="email">Mail</span>
+            <img src="./Images/email.png" alt="Email Icon" class="nav-icon">
+          </a>
+        </li><br><br><br><br>
+        
+        <li>
+          <a href="#" class="nav-link" data-content="profile">
+            <span class="profile">Profile</span>
+            <img src="./Images/profile.png" alt="Profile Icon" class="nav-icon">
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-link" data-content="logout">
+            <span class="logout">Logout</span>
+            <img src="./Images/logout.png" alt="Logout Icon" class="nav-icon">
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+
+  <div class="containerr">
+    <header class="header" id="mainHeader">
+      <button id="menuToggle" class="menu-toggle">☰</button>
+      <h1>Presidency University, Bengaluru</h1>
+      <span id="headerProfile">
+        <span id="headerProfileName" style="font-weight:bold;margin-right:10px;"></span>
+        <img id="headerProfileImg" src=" " alt="Profile" style="width:40px; height:40px; border-radius:50%; vertical-align:middle; margin-right:0px;">
+      </span>
+    </header>
+    <main class="content">
+    </main>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,2035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Presidency University</title>
+  <link rel="stylesheet" href="HomePage.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script>
+
+    const PORTAL_API = 'http://localhost:9110/portal';
+    const STUDENTS_API = 'http://localhost:9098/Admin/Admin-Students';
+    const COURSES_API = 'http://localhost:9094/admin/admin-student-course';
+    const TIMETABLE_API = 'http://localhost:9100/Admin/Admin_Students_Timetable';
+    const FEE_API = 'http://localhost:9096/Admin/admin_branch_fee';
+    const PROFILE_API = 'http://localhost:9098/Admin/Admin-Students';
+    let paymentHistory = [];
+
+    async function refreshStudentProfile() {
+      const registerNo = localStorage.getItem('studentRegisterNumber') || localStorage.getItem('registerNumber');
+      if (!registerNo) return;
+
+      try {
+        const response = await fetch(`${PROFILE_API}/by-reg/${encodeURIComponent(registerNo)}`);
+        if (!response.ok) return;
+        const student = await response.json();
+        localStorage.setItem('profileName', student.name || '');
+        localStorage.setItem('profileEmail', student.email || '');
+        localStorage.setItem('profilePhone', student.phone || '');
+        localStorage.setItem('profileRegNo', student.registerNo || registerNo);
+        localStorage.setItem('studentRegisterNumber', student.registerNo || registerNo);
+        updateHeaderProfile();
+
+        const fields = {
+          profileName: student.name || 'N/A',
+          profileEmail: student.email || 'N/A',
+          profilePhone: student.phone || 'N/A',
+          profileRegNo: student.registerNo || registerNo,
+          profileSection: student.section || 'N/A'
+        };
+        Object.entries(fields).forEach(([id, value]) => {
+          const element = document.getElementById(id);
+          if (element) element.textContent = value;
+        });
+      } catch (error) {
+        console.error('Student profile refresh failed:', error);
+      }
+    }
+
+    function loadContent(contentId) {
+      const contentDiv = document.querySelector('.content');
+      
+      contentDiv.innerHTML = '';
+
+      switch (contentId) {
+        case 'home':
+          contentDiv.innerHTML = `
+            <h3>Welcome to Student Dashboard</h3>
+            <h2>My Courses</h2>
+            <div id="loading-courses" class="loading" style="display: block;">Loading your courses...</div>
+            <div id="course-grid" class="course-grid" style="display: none;"></div>
+            <div id="no-courses" class="no-courses" style="display: none;">
+                <p>No courses assigned to you yet.</p>
+            </div>
+          `;
+          loadMyCourses();
+          break;
+
+        case 'timetables':
+          contentDiv.innerHTML = `
+            <div class="container3">
+              <div class="header">
+                <h2>Weekly Student Timetable</h2>
+              </div>
+              <div id="loading-timetable" style="text-align:center; padding:30px;">
+                Loading your timetable...
+              </div>
+              <div id="timetableContainer"></div>
+              <div id="no-timetable" style="display:none; text-align:center; padding:40px; color:#666;">
+                <p>No timetable assigned yet.</p>
+              </div>
+            </div>
+          `;
+          loadStudentTimetable();
+          break;
+
+        case 'academic_calendar':
+          contentDiv.innerHTML = `
+            <div class="calendar-container">
+              <h1>2025 College Calendar</h1>
+              <div class="calendar">
+                <!-- January -->
+                <div class="month">
+                  <h2>January</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span class="empty"></span><span class="empty"></span><span class="empty"></span>
+                    <span>1</span><span>2</span><span>3</span><span>4</span>
+                    <span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span>
+                    <span>12</span><span>13</span><span>14</span><span>15</span><span class="festival">16</span><span>17</span><span>18</span>
+                    <span>19</span><span>20</span><span>21</span><span>22</span><span>23</span><span>24</span><span>25</span>
+                    <span>26</span><span>27</span><span>28</span><span>29</span><span>30</span><span>31</span>
+                  </div>
+                  <p class="details">Holidays: 16th (Makar Sankranti), 26th (Republic Day)</p>
+                  <p class="reopen">College reopens: 27th January</p>
+                </div>
+                <!-- February -->
+                <div class="month">
+                  <h2>February</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span class="empty"></span><span class="empty"></span><span class="empty"></span>
+                    <span>1</span><span>2</span><span>3</span><span class="festival">4</span>
+                    <span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span>
+                    <span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span>
+                    <span>19</span><span>20</span><span>21</span><span>22</span><span>23</span><span>24</span><span>25</span>
+                    <span>26</span><span>27</span><span>28</span>
+                  </div>
+                  <p class="details">Holiday: 4th (Vasant Panchami)</p>
+                  <p class="reopen">College reopens: 5th February</p>
+                </div>
+                <!-- March -->
+                <div class="month">
+                  <h2>March</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
+                    <span>8</span><span>9</span><span>10</span><span>11</span><span class="festival">12</span><span>13</span><span>14</span>
+                    <span>15</span><span>16</span><span class="festival">17</span><span>18</span><span>19</span><span>20</span><span>21</span>
+                    <span>22</span><span>23</span><span>24</span><span>25</span><span>26</span><span>27</span><span>28</span>
+                    <span>29</span><span>30</span><span>31</span>
+                  </div>
+                  <p class="details">Holidays: 12th (Mahashivratri), 17th (Holi)</p>
+                  <p class="reopen">College reopens: 18th March</p>
+                </div>
+                <!-- April -->
+                <div class="month">
+                  <h2>April</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span class="empty"></span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+                    <span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span class="festival">12</span><span>13</span>
+                    <span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span>
+                    <span>21</span><span>22</span><span>23</span><span>24</span><span>25</span><span>26</span><span>27</span>
+                    <span>28</span><span>29</span><span class="festival">30</span>
+                  </div>
+                  <p class="details">Holidays: 12th (Ram Navami), 30th (Buddha Purnima)</p>
+                  <p class="reopen">College reopens: 1st May</p>
+                </div>
+
+                <!-- May -->
+                <div class="month">
+                  <h2>May</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
+                    <span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span>
+                    <span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>21</span>
+                    <span>22</span><span>23</span><span>24</span><span>25</span><span class="festival">26</span><span>27</span><span>28</span>
+                    <span>29</span><span>30</span><span>31</span>
+                  </div>
+                  <p class="details">Holiday: 26th (Eid al-Fitr)</p>
+                  <p class="reopen">College reopens: 27th May</p>
+                </div>
+
+                <!-- June -->
+                <div class="month">
+                  <h2>June</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span class="empty"></span><span class="empty"></span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+                    <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span>
+                    <span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span>
+                    <span>20</span><span>21</span><span>22</span><span>23</span><span>24</span><span>25</span><span>26</span>
+                    <span>27</span><span>28</span><span>29</span><span>30</span>
+                  </div>
+                  <p class="details">No Holidays</p>
+                  <p class="reopen">Regular classes throughout June</p>
+                </div>
+
+                <!-- July -->
+                <div class="month">
+                  <h2>July</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
+                    <span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span class="festival">13</span><span>14</span>
+                    <span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>21</span>
+                    <span>22</span><span>23</span><span>24</span><span>25</span><span>26</span><span>27</span><span>28</span>
+                    <span>29</span><span>30</span><span>31</span>
+                  </div>
+                  <p class="details">Holiday: 13th (Bakri Eid)</p>
+                  <p class="reopen">College reopens: 14th July</p>
+                </div>
+
+                <!-- August -->
+                <div class="month">
+                  <h2>August</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span class="empty"></span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+                    <span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span>
+                    <span class="festival">14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span>
+                    <span>21</span><span>22</span><span>23</span><span>24</span><span>25</span><span>26</span><span>27</span>
+                    <span>28</span><span>29</span><span>30</span><span>31</span>
+                  </div>
+                  <p class="details">Holiday: 14th (Independence Day)</p>
+                  <p class="reopen">College reopens: 16th August</p>
+                </div>
+
+                <!-- September -->
+                <div class="month">
+                  <h2>September</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span class="empty"></span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+                    <span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span class="festival">13</span>
+                    <span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span>
+                    <span>21</span><span>22</span><span>23</span><span>24</span><span class="festival">25</span><span>26</span><span>27</span>
+                    <span>28</span><span>29</span><span>30</span>
+                  </div>
+                  <p class="details">Holidays: 13th (Ganesh Chaturthi), 25th (Anant Chaturdashi)</p>
+                  <p class="reopen">College reopens: 26th September</p>
+                </div>
+
+                <!-- October -->
+                <div class="month">
+                  <h2>October</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
+                    <span>8</span><span class="festival">9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span>
+                    <span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span class="festival">20</span><span>21</span>
+                    <span>22</span><span>23</span><span>24</span><span class="festival">25</span><span>26</span><span>27</span><span>28</span>
+                    <span>29</span><span>30</span><span>31</span>
+                  </div>
+                  <p class="details">Holidays: 9th (Gandhi Jayanti), 20th (Dussehra), 25th (Karva Chauth)</p>
+                  <p class="reopen">College reopens: 27th October</p>
+                </div>
+
+                <!-- November -->
+                <div class="month">
+                  <h2>November</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span class="empty"></span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+                    <span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span>
+                    <span class="festival">14</span><span>15</span><span class="festival">16</span><span>17</span><span>18</span><span>19</span><span>20</span>
+                    <span>21</span><span>22</span><span>23</span><span class="festival">24</span><span>25</span><span>26</span><span>27</span>
+                    <span>28</span><span>29</span><span>30</span>
+                  </div>
+                  <p class="details">Holidays: 14th (Diwali), 16th (Govardhan Puja), 24th (Guru Nanak Jayanti)</p>
+                  <p class="reopen">College reopens: 25th November</p>
+                </div>
+
+                <!-- December -->
+                <div class="month">
+                  <h2>December</h2>
+                  <div class="days-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span>
+                    <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="days-grid">
+                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
+                    <span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span>
+                    <span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>21</span>
+                    <span>22</span><span>23</span><span>24</span><span class="festival">25</span><span>26</span><span>27</span><span>28</span>
+                    <span>29</span><span>30</span><span>31</span>
+                  </div>
+                  <p class="details">Holiday: 25th (Christmas)</p>
+                  <p class="reopen">College reopens: 26th December</p>
+                </div>
+
+              </div>
+            </div>
+                `;
+          break;
+
+        case 'attendance':
+          contentDiv.innerHTML = `
+            <div class="container4">
+              <h1>Attendance Overview</h1>
+              <div class="attendance-summary" id="studentAttendanceSummary">
+                <p>Loading attendance...</p>
+              </div>
+
+              <div class="charts-wrapper" id="attendanceCharts" style="display:none;">
+                <div class="chart-card">
+                  <h3>Attendance by Subject</h3>
+                  <canvas id="attendanceBarChart" height="200"></canvas>
+                </div>
+                <div class="chart-card">
+                  <h3>Overall Attendance</h3>
+                  <canvas id="attendanceDonutChart" height="200"></canvas>
+                </div>
+              </div>
+
+              <div class="records-section" id="attendanceRecordsSection" style="display:none;">
+                <h3>Detailed Records</h3>
+                <div id="attendanceRecords"></div>
+              </div>
+            </div>
+          `;
+          loadStudentAttendanceSummary();
+          break;
+
+        case 'my_fee':
+          contentDiv.innerHTML = `
+            <div class="container5">
+              <div class="header">
+                <h1>My Fee</h1>
+              </div>
+              <div class="program-select">
+                <label for="sectionSelect">Select Program:</label>
+                <select id="sectionSelect">
+                  <option value="MCA">MCA</option>
+                  <option value="MBA">MBA</option>
+                  <option value="MTech">MTech</option>
+                  <option value="BTech">BTech</option>
+                  <option value="BCA">BCA</option>
+                  <option value="BBA">BBA</option>
+                  <option value="BSc">BSc</option>
+                  <option value="CSE">CSE</option>
+                </select>
+              </div>
+              <div id="loading-fees" style="text-align:center; padding:30px;">Loading fee details...</div>
+              <table id="feeTable" style="display:none;">
+                <thead>
+                  <tr>
+                    <th>SL.NO</th>
+                    <th>Categories</th>
+                    <th>Fees</th>
+                    <th>Paid</th>
+                    <th>Balance</th>
+                  </tr>
+                </thead>
+                <tbody id="feeTableBody"></tbody>
+                <tfoot>
+                  <tr class="total-row">
+                    <td colspan="2">Total</td>
+                    <td id="totalFees">0</td>
+                    <td id="totalPaid">0</td>
+                    <td id="totalBalance">0</td>
+                  </tr>
+                </tfoot>
+              </table>
+              <div class="payment-form" id="paymentForm" style="display:none;">
+                <label for="amount">Amount to Pay:</label>
+                <input type="number" id="amount" placeholder="Enter amount (₹)" min="0" step="0.01">
+                <button id="payButton">Pay Now</button>
+              </div>
+              <div class="receipt-container">
+                <h2>Payment History</h2>
+                <ul id="paymentList"></ul>
+                <button id="downloadReceiptBtn">Download Receipt</button>
+              </div>
+            </div>
+          `;
+
+          loadStudentFees();
+          document.getElementById('sectionSelect').addEventListener('change', loadStudentFees);
+          document.getElementById('payButton').addEventListener('click', processPayment);
+          document.getElementById('downloadReceiptBtn').addEventListener('click', downloadReceipt);
+          renderPaymentHistory();
+          break;
+        
+        case 'students_email':
+            contentDiv.innerHTML = `
+              <div class="container9">
+                <h1>Mail</h1>
+                <div class="mail-workspace">
+                <form id="studentEmailForm" class="email-form">
+                  <select name="recipientRole" required>
+                    <option value="FACULTY">Faculty</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                  <input type="text" placeholder="Recipient Name" name="recipientName" required />
+                  <input type="text" placeholder="Recipient ID / Register Number" name="recipientId" required />
+                  <input type="text" placeholder="Subject" name="subject" required />
+                  <textarea name="description" rows="8" placeholder="Write your message..." required></textarea>
+                  <div id="attached-files-student" class="attached-files"></div>
+                  
+                  <button type="submit" class="btn-icon" title="Send Email">
+                    <img src="./Images/mail_Icons/send.png"> Send
+                  </button><br>
+
+                  <div class="email-actions">
+                    <label class="btn-icons" title="Attach Files">
+                      <img src="./Images/mail_Icons/file.png"> File
+                      <input type="file" id="file-input-student" style="display: none;" multiple />
+                    </label>
+                    <button type="button" class="btn-icons share-btn" title="Share" disabled>
+                      <img src="./Images/mail_Icons/share.png"> Share
+                    </button>
+                    <button type="button" class="btn-icons draft-btn" title="Save Draft">
+                      <img src="./Images/mail_Icons/drafts.png"> Draft
+                      <span class="draft-count" id="draft-count-student">0</span>
+                    </button>
+                    <button type="button" class="btn-icons inbox-btn" title="Check All Mails">
+                      <img src="./Images/mail_Icons/inbox.png"> All Mails
+                    </button>
+                    <button type="reset" class="btn-icons" title="Clear Form">
+                      <img src="./Images/mail_Icons/cancle.png"> Cancel
+                    </button>
+                  </div>
+                </form>
+                <div id="student-mailbox" class="draft-list"></div>
+                </div>
+                <div id="image-modal-student" class="modal" style="display: none;">
+                  <button class="modal-close">×</button>
+                  <img id="modal-image-student" class="modal-content">
+                </div>
+                <div id="share-modal-student" class="modal" style="display: none;">
+                  <div class="modal-content">
+                    <button class="modal-close" id="share-modal-close-student" title="Cancel">X</button>
+                    <h2>Share Message</h2>
+                    <div class="share-options">
+                      <button class="share-option whatsapp" data-platform="whatsapp">
+                        <i class="fab fa-whatsapp"></i>
+                      </button>
+                      <button class="share-option x" data-platform="x">
+                        <i class="fab fa-x-twitter"></i>
+                      </button>
+                      <button class="share-option gmail" data-platform="gmail">
+                        <i class="fas fa-envelope"></i>
+                      </button>
+                      <button class="share-option outlook" data-platform="outlook">
+                        <i class="fas fa-envelope-open-text"></i>
+                      </button>
+                    </div>
+                    <button id="share-confirm-student" class="btn-icon">Share</button>
+                  </div>
+                </div>
+                <div id="draft-modal-student" class="modal draft-modal" style="display: none;">
+                  <div class="modal-content">
+                    <button class="modal-close" id="draft-modal-close-student" title="Cancel">X</button>
+                    <h2>Saved Drafts</h2>
+                    <div id="draft-list-student" class="draft-list"></div>
+                  </div>
+                </div>
+              </div>
+            `;
+            setupStudentMail('studentEmailForm', 'file-input-student', 'attached-files-student', setupShareMail);
+            break;
+
+          
+          case 'profile':
+            const name = localStorage.getItem('profileName') || 'N/A';
+            const email = localStorage.getItem('profileEmail') || 'N/A';
+            const regNo = localStorage.getItem('profileRegNo') || 'N/A';
+            const phone = localStorage.getItem('profilePhone') || 'N/A';
+            const imgSrc = localStorage.getItem('profileImage');
+
+            contentDiv.innerHTML = `
+              <div class="profile" id="profileDisplay">
+                <h1>PROFILE</h1>
+                <div id="profileImageSpace">${imgSrc ? `<img src="${imgSrc}" alt="Profile Image" style="max-width: 150px; border-radius: 8px;"/>` : 'No image selected'}</div>
+                <p>Name: <span id="profileName">Loading...</span></p>
+                <p>Email: <span id="profileEmail">Loading...</span></p>
+                <p>Registration Number: <span id="profileRegNo">Loading...</span></p>
+                <p>Section: <span id="profileSection">Loading...</span></p>
+                <p>Phone Number: <span id="profilePhone">${phone}</span></p>
+
+                <div>
+                  <button class="button" onclick="location.href='EditProfile.html'">Edit Profile</button>
+                  <button class="button" onclick="location.href='./Form/Login.html'">LogIn</button>
+                </div>
+              </div>
+            `;
+            refreshStudentProfile();
+            break;
+
+
+        case 'logout':
+          localStorage.clear();
+          window.location.href = './Form/Login.html';
+          contentDiv.innerHTML = `
+            <h2>Logout</h2>
+            <p>You have been logged out. Thank you!</p>
+          `;
+          break;
+
+        default:
+          contentDiv.innerHTML = `
+            <h2>Welcome to Presidency University</h2>
+            <p>Please select a section from the menu.</p>
+          `;
+          break;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const links = document.querySelectorAll('.nav-link');
+
+      links.forEach(link => {
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          const contentId = link.getAttribute('data-content');
+          loadContent(contentId);
+        });
+      });
+
+      loadContent('home');
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      refreshStudentProfile();
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('showProfile')) {
+        loadContent('profile');
+      } else {
+        loadContent('home');
+      }
+      updateHeaderProfile();
+
+      // Sidebar menu toggle for responsiveness
+      const menuToggle = document.getElementById('menuToggle');
+      const navbar = document.querySelector('.navbar');
+      if (menuToggle && navbar) {
+        menuToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          navbar.classList.toggle('active');
+        });
+        document.addEventListener('click', (e) => {
+          if (!navbar.contains(e.target) && e.target !== menuToggle) {
+            navbar.classList.remove('active');
+          }
+        });
+      }
+    });
+
+    function updateHeaderProfile() {
+      const name = localStorage.getItem('profileName');
+      const imgSrc = localStorage.getItem('profileImage');
+
+      const img = document.getElementById('headerProfileImg');
+      const nameSpan = document.getElementById('headerProfileName');
+
+      if (img && imgSrc) {
+        img.src = imgSrc;
+        img.style.display = 'inline-block';
+      } else if (img) {
+        img.style.display = 'none';
+      }
+
+      if (nameSpan && name) {
+        nameSpan.textContent = name;
+      } else if (nameSpan) {
+        nameSpan.textContent = '';
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', function () {
+      updateHeaderProfile();
+
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('showProfile') === '1') {
+        loadSection('profile');
+      }
+    });
+
+
+    //Timetable
+    function toggleEdit() {
+      const editBtn = document.getElementById('editBtn');
+      const saveBtn = document.getElementById('saveBtn');
+      const editableElements = document.querySelectorAll('#timetable th.editable, #timetable td.editable');
+
+      if (editBtn.textContent === 'Edit Timetable') {
+        // Enter edit mode
+        editableElements.forEach(element => {
+          const text = element.innerHTML.replace(/<br>/g, '\n');
+          element.innerHTML = `<textarea>${text}</textarea>`;
+          element.classList.add('editing');
+        });
+        editBtn.textContent = 'Cancel Edit';
+        saveBtn.style.display = 'inline-block';
+      } else {
+        // Cancel edit mode
+        editableElements.forEach(element => {
+          const textarea = element.querySelector('textarea');
+          if (textarea) {
+            const text = textarea.value.replace(/\n/g, '<br>');
+            element.innerHTML = text || '';
+            element.classList.remove('editing');
+            // Restore header styling if it's a <th>
+            if (element.tagName === 'TH') {
+              element.classList.add('editable');
+              if (text.includes('Lunch Break')) {
+                element.classList.add('break');
+              } else if (text.includes('Short Break')) {
+                element.classList.add('short-break');
+              }
+            }
+          }
+        });
+        editBtn.textContent = 'Edit Timetable';
+        saveBtn.style.display = 'none';
+      }
+    }
+
+    function saveChanges() {
+      const editableElements = document.querySelectorAll('#timetable th.editable, #timetable td.editable');
+      editableElements.forEach(element => {
+        const textarea = element.querySelector('textarea');
+        if (textarea) {
+          const text = textarea.value.replace(/\n/g, '<br>');
+          element.innerHTML = text || '';
+          element.classList.remove('editing');
+
+          // Update classes based on content
+          element.className = 'editable';
+          if (text.includes('Theory')) {
+            element.classList.add('theory');
+          } else if (text.includes('Lab')) {
+            element.classList.add('lab');
+          } else if (text.includes('Lunch Break')) {
+            element.classList.add('break');
+          } else if (text.includes('Short Break')) {
+            element.classList.add('short-break');
+          }
+
+          // Restore header styling for <th> if no specific content
+          if (element.tagName === 'TH' && !text.includes('Lunch Break') && !text.includes('Short Break')) {
+            element.classList.add('editable');
+          }
+        }
+      });
+      document.getElementById('editBtn').textContent = 'Edit Timetable';
+      document.getElementById('saveBtn').style.display = 'none';
+    }
+
+
+    //My Fee
+    function updateTotals() {
+      const rows = document.querySelectorAll('#feeTable tbody tr:not(.total-row)');
+      let totalFees = 0;
+      let totalPaid = 0;
+      let totalBalance = 0;
+
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('td.editable');
+        const fees = parseFloat(cells[1].textContent) || 0;
+        const paid = parseFloat(cells[2].textContent) || 0;
+        const balance = fees - paid;
+        cells[3].textContent = balance.toFixed(2); // Update Balance column
+        totalFees += fees;
+        totalPaid += paid;
+        totalBalance += balance;
+      });
+
+      // Update Total row
+      const totalFeesCell = document.getElementById('totalFees');
+      const totalPaidCell = document.getElementById('totalPaid');
+      const totalBalanceCell = document.getElementById('totalBalance');
+
+      if (totalFeesCell && totalPaidCell && totalBalanceCell) {
+        totalFeesCell.textContent = totalFees.toFixed(2);
+        totalPaidCell.textContent = totalPaid.toFixed(2);
+        totalBalanceCell.textContent = totalBalance.toFixed(2);
+      } else {
+        console.error('Total cells not found');
+      }
+    }
+
+    function toggleFeeEdit() {
+      const editBtn = document.getElementById('editFeeBtn');
+      const saveBtn = document.getElementById('saveFeeBtn');
+      const editableCells = document.querySelectorAll('#feeTable tbody tr:not(.total-row) td.editable');
+
+      if (editBtn.textContent === 'Edit Fees') {
+        // Enter edit mode
+        editableCells.forEach(cell => {
+          const text = cell.innerHTML.replace(/<br>/g, '\n');
+          cell.innerHTML = `<textarea>${text}</textarea>`;
+          cell.classList.add('editing');
+        });
+        editBtn.textContent = 'Cancel Edit';
+        saveBtn.style.display = 'inline-block';
+      } else {
+        // Cancel edit mode
+        editableCells.forEach(cell => {
+          const textarea = cell.querySelector('textarea');
+          if (textarea) {
+            const text = textarea.value.replace(/\n/g, '<br>');
+            cell.innerHTML = text || '';
+            cell.classList.remove('editing');
+          }
+        });
+        editBtn.textContent = 'Edit Fees';
+        saveBtn.style.display = 'none';
+        updateTotals();
+      }
+    }
+
+    function saveFeeChanges() {
+      const editableCells = document.querySelectorAll('#feeTable tbody tr:not(.total-row) td.editable');
+      editableCells.forEach(cell => {
+        const textarea = cell.querySelector('textarea');
+        if (textarea) {
+          const text = textarea.value.replace(/\n/g, '<br>');
+          cell.innerHTML = text || '';
+          cell.classList.remove('editing');
+        }
+      });
+      document.getElementById('editFeeBtn').textContent = 'Edit Fees';
+      document.getElementById('saveFeeBtn').style.display = 'none';
+      updateTotals();
+    }
+
+    function addFeeRow() {
+      const tbody = document.querySelector('#feeTable tbody');
+      const totalRow = document.querySelector('#feeTable .total-row');
+      const rows = document.querySelectorAll('#feeTable tbody tr:not(.total-row)');
+      const newSlNo = rows.length + 1;
+      const newRow = document.createElement('tr');
+      const columnCount = document.querySelector('#feeTable thead tr').children.length;
+
+      newRow.innerHTML = `
+        <td>${newSlNo}</td>
+        <td class="editable"></td>
+        <td class="editable">0</td>
+        <td class="editable">0</td>
+        <td class="editable">0</td>
+        ${'<td class="editable"></td>'.repeat(columnCount - 5)}
+      `;
+      tbody.insertBefore(newRow, totalRow);
+
+      // Update SL.NO for all rows
+      const allRows = document.querySelectorAll('#feeTable tbody tr:not(.total-row)');
+      allRows.forEach((row, index) => {
+        row.cells[0].textContent = index + 1;
+      });
+
+      updateTotals();
+    }
+
+    function addFeeColumn() {
+      const headerRow = document.querySelector('#feeTable thead tr');
+      const totalRow = document.querySelector('#feeTable .total-row');
+      const allRows = document.querySelectorAll('#feeTable tbody tr:not(.total-row)');
+
+      // Create modal for column header input
+      const modalOverlay = document.createElement('div');
+      modalOverlay.className = 'modal-overlay';
+      modalOverlay.innerHTML = `
+        <div class="modal">
+          <h3>Add New Column</h3>
+          <p>Enter new column header:</p>
+          <input type="text" id="newColumnHeader" placeholder="Column Name">
+          <div class="modal-buttons">
+            <button class="confirm-btn" id="confirmAddColumn">Add</button>
+            <button class="cancel-btn" id="cancelAddColumn">Cancel</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modalOverlay);
+
+      document.getElementById('confirmAddColumn').addEventListener('click', () => {
+        const newHeader = document.getElementById('newColumnHeader').value || `Column ${headerRow.children.length + 1}`;
+        // Add new header
+        const th = document.createElement('th');
+        th.textContent = newHeader;
+        headerRow.appendChild(th);
+        // Add new editable cell to each row
+        allRows.forEach(row => {
+          const td = document.createElement('td');
+          td.className = 'editable';
+          td.textContent = '';
+          row.appendChild(td);
+        });
+        // Update total row colspan
+        const totalCell = totalRow.cells[0];
+        totalCell.setAttribute('colspan', parseInt(totalCell.getAttribute('colspan')) + 1);
+        modalOverlay.remove();
+        updateTotals();
+      });
+
+      document.getElementById('cancelAddColumn').addEventListener('click', () => {
+        modalOverlay.remove();
+      });
+    }
+
+    function deleteFeeRow() {
+      const rows = document.querySelectorAll('#feeTable tbody tr:not(.total-row)');
+      if (rows.length === 0) {
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'modal-overlay';
+        modalOverlay.innerHTML = `
+          <div class="modal">
+            <h3>No Rows to Delete</h3>
+            <p>There are no rows available to delete.</p>
+            <div class="modal-buttons">
+              <button class="confirm-btn" id="closeModal">OK</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modalOverlay);
+        document.getElementById('closeModal').addEventListener('click', () => {
+          modalOverlay.remove();
+        });
+        return;
+      }
+
+      const modalOverlay = document.createElement('div');
+      modalOverlay.className = 'modal-overlay';
+      modalOverlay.innerHTML = `
+        <div class="modal">
+          <h3>Delete Row</h3>
+          <p>Enter row number to delete (1-${rows.length}):</p>
+          <input type="number" id="rowIndexInput" min="1" max="${rows.length}">
+          <div class="modal-buttons">
+            <button class="confirm-btn" id="confirmDeleteRow">Delete</button>
+            <button class="cancel-btn" id="cancelDeleteRow">Cancel</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modalOverlay);
+
+      document.getElementById('confirmDeleteRow').addEventListener('click', () => {
+        const rowIndex = parseInt(document.getElementById('rowIndexInput').value) - 1;
+        if (isNaN(rowIndex) || rowIndex < 0 || rowIndex >= rows.length) {
+          const errorModal = document.createElement('div');
+          errorModal.className = 'modal-overlay';
+          errorModal.innerHTML = `
+            <div class="modal">
+              <h3>Invalid Row Number</h3>
+              <p>Please enter a valid row number.</p>
+              <div class="modal-buttons">
+                <button class="confirm-btn" id="closeErrorModal">OK</button>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(errorModal);
+          document.getElementById('closeErrorModal').addEventListener('click', () => {
+            errorModal.remove();
+          });
+          return;
+        }
+
+        const confirmModal = document.createElement('div');
+        confirmModal.className = 'modal-overlay';
+        confirmModal.innerHTML = `
+          <div class="modal">
+            <h3>Confirm Deletion</h3>
+            <p>Are you sure you want to delete row ${rowIndex + 1}?</p>
+            <div class="modal-buttons">
+              <button class="confirm-btn" id="confirmRowDeletion">Yes</button>
+              <button class="cancel-btn" id="cancelRowDeletion">No</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(confirmModal);
+
+        document.getElementById('confirmRowDeletion').addEventListener('click', () => {
+          rows[rowIndex].remove();
+          // Update SL.NO for remaining rows
+          const remainingRows = document.querySelectorAll('#feeTable tbody tr:not(.total-row)');
+          remainingRows.forEach((row, i) => {
+            row.cells[0].textContent = i + 1;
+          });
+          confirmModal.remove();
+          modalOverlay.remove();
+          updateTotals();
+        });
+
+        document.getElementById('cancelRowDeletion').addEventListener('click', () => {
+          confirmModal.remove();
+          modalOverlay.remove();
+        });
+      });
+
+      document.getElementById('cancelDeleteRow').addEventListener('click', () => {
+        modalOverlay.remove();
+      });
+    }
+
+    function deleteFeeColumn() {
+      const headerRow = document.querySelector('#feeTable thead tr');
+      const columns = headerRow.children;
+      if (columns.length <= 5) {
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'modal-overlay';
+        modalOverlay.innerHTML = `
+          <div class="modal">
+            <h3>Cannot Delete Core Columns</h3>
+            <p>Cannot delete core columns (SL.NO, Categories, Fees, Paid, Balance).</p>
+            <div class="modal-buttons">
+              <button class="confirm-btn" id="closeModal">OK</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modalOverlay);
+        document.getElementById('closeModal').addEventListener('click', () => {
+          modalOverlay.remove();
+        });
+        return;
+      }
+
+      const modalOverlay = document.createElement('div');
+      modalOverlay.className = 'modal-overlay';
+      modalOverlay.innerHTML = `
+        <div class="modal">
+          <h3>Delete Column</h3>
+          <p>Enter column number to delete (6-${columns.length}):</p>
+          <input type="number" id="columnIndexInput" min="6" max="${columns.length}">
+          <div class="modal-buttons">
+            <button class="confirm-btn" id="confirmDeleteColumn">Delete</button>
+            <button class="cancel-btn" id="cancelDeleteColumn">Cancel</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modalOverlay);
+
+      document.getElementById('confirmDeleteColumn').addEventListener('click', () => {
+        const columnIndex = parseInt(document.getElementById('columnIndexInput').value) - 1;
+        if (isNaN(columnIndex) || columnIndex < 5 || columnIndex >= columns.length) {
+          const errorModal = document.createElement('div');
+          errorModal.className = 'modal-overlay';
+          errorModal.innerHTML = `
+            <div class="modal">
+              <h3>Invalid Column Number</h3>
+              <p>Please enter a valid column number or avoid core columns.</p>
+              <div class="modal-buttons">
+                <button class="confirm-btn" id="closeErrorModal">OK</button>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(errorModal);
+          document.getElementById('closeErrorModal').addEventListener('click', () => {
+            errorModal.remove();
+          });
+          return;
+        }
+
+        const confirmModal = document.createElement('div');
+        confirmModal.className = 'modal-overlay';
+        confirmModal.innerHTML = `
+          <div class="modal">
+            <h3>Confirm Deletion</h3>
+            <p>Are you sure you want to delete column "${columns[columnIndex].textContent}"?</p>
+            <div class="modal-buttons">
+              <button class="confirm-btn" id="confirmColumnDeletion">Yes</button>
+              <button class="cancel-btn" id="cancelColumnDeletion">No</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(confirmModal);
+
+        document.getElementById('confirmColumnDeletion').addEventListener('click', () => {
+          // Remove column from header
+          headerRow.children[columnIndex].remove();
+          // Remove column from each row
+          document.querySelectorAll('#feeTable tbody tr').forEach(row => {
+            if (row.cells[columnIndex]) {
+              row.cells[columnIndex].remove();
+            }
+          });
+          // Update total row colspan
+          const totalRow = document.querySelector('#feeTable .total-row');
+          const totalCell = totalRow.cells[0];
+          totalCell.setAttribute('colspan', parseInt(totalCell.getAttribute('colspan')) - 1);
+          confirmModal.remove();
+          modalOverlay.remove();
+          updateTotals();
+        });
+
+        document.getElementById('cancelColumnDeletion').addEventListener('click', () => {
+          confirmModal.remove();
+          modalOverlay.remove();
+        });
+      });
+
+      document.getElementById('cancelDeleteColumn').addEventListener('click', () => {
+        modalOverlay.remove();
+      });
+    }
+
+    function processPayment() {
+      const amountInput = document.getElementById('amount');
+      const amount = parseFloat(amountInput.value);
+      const totalBalance = parseFloat(document.getElementById('totalBalance').textContent);
+      const program = document.getElementById('sectionSelect').value;
+
+      // Validate amount
+      if (isNaN(amount) || amount <= 0) {
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'modal-overlay';
+        modalOverlay.innerHTML = `
+          <div class="modal">
+            <h3>Invalid Amount</h3>
+            <p>Please enter a valid positive amount.</p>
+            <div class="modal-buttons">
+              <button class="confirm-btn" id="closeModal">OK</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modalOverlay);
+        document.getElementById('closeModal').addEventListener('click', () => {
+          modalOverlay.remove();
+        });
+        return;
+      }
+
+      if (amount > totalBalance) {
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'modal-overlay';
+        modalOverlay.innerHTML = `
+          <div class="modal">
+            <h3>Amount Exceeds Balance</h3>
+            <p>The amount entered (₹${amount.toFixed(2)}) exceeds the total balance (₹${totalBalance.toFixed(2)}).</p>
+            <div class="modal-buttons">
+              <button class="confirm-btn" id="closeModal">OK</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modalOverlay);
+        document.getElementById('closeModal').addEventListener('click', () => {
+          modalOverlay.remove();
+        });
+        return;
+      }
+
+      // Distribute payment across rows
+      let remainingAmount = amount;
+      const rows = document.querySelectorAll('#feeTable tbody tr:not(.total-row)');
+      rows.forEach(row => {
+        if (remainingAmount <= 0) return;
+        const cells = row.querySelectorAll('td.editable');
+        const balance = parseFloat(cells[3].textContent) || 0;
+        if (balance > 0) {
+          const payment = Math.min(remainingAmount, balance);
+          const currentPaid = parseFloat(cells[2].textContent) || 0;
+          cells[2].textContent = (currentPaid + payment).toFixed(2);
+          cells[3].textContent = (balance - payment).toFixed(2);
+          remainingAmount -= payment;
+        }
+      });
+
+      // Record payment in history
+      const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
+      paymentHistory.push({ program, amount: amount.toFixed(2), timestamp });
+      renderPaymentHistory();
+
+      // Clear input
+      amountInput.value = '';
+      updateTotals();
+    }
+
+    function renderPaymentHistory() {
+      const paymentList = document.getElementById('paymentList');
+      paymentList.innerHTML = '';
+      paymentHistory.forEach(payment => {
+        const li = document.createElement('li');
+        li.textContent = `${payment.program}: ₹${payment.amount} paid on ${payment.timestamp}`;
+        paymentList.appendChild(li);
+      });
+    }
+
+    function downloadReceipt() {
+      if (paymentHistory.length === 0) {
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'modal-overlay';
+        modalOverlay.innerHTML = `
+          <div class="modal">
+            <h3>No Payments</h3>
+            <p>No payments have been recorded to generate a receipt.</p>
+            <div class="modal-buttons">
+              <button class="confirm-btn" id="closeModal">OK</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modalOverlay);
+        document.getElementById('closeModal').addEventListener('click', () => {
+          modalOverlay.remove();
+        });
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(16);
+      doc.text('Fee Payment Receipt', 20, 20);
+      doc.setFontSize(12);
+      doc.text('Payment History:', 20, 30);
+
+      const headers = ["SL.NO", "Program", "Amount", "Date and Time"];
+      const rows = paymentHistory.map((p, i) => [
+        `${i + 1}`,
+        p.program,
+        `${p.amount}`,
+        p.timestamp.replace(',', ' at')
+      ]);
+
+      doc.autoTable({
+        head: [headers],
+        body: rows,
+        startY: 40,
+      });
+
+      doc.text(`Issued on: ${new Date().toLocaleString('en-IN')}`, 20, doc.lastAutoTable.finalY + 10);
+      doc.save("receipt.pdf");
+    }
+
+    let attendanceBarChart = null;
+    let attendanceDonutChart = null;
+
+    async function loadStudentAttendanceSummary() {
+      const container = document.getElementById('studentAttendanceSummary');
+      const chartsWrapper = document.getElementById('attendanceCharts');
+      const recordsSection = document.getElementById('attendanceRecordsSection');
+      const registerNumber = getCurrentStudentIdentity().id;
+
+      if (!registerNumber) {
+        container.innerHTML = '<p>Please update your profile with a registration number to view attendance.</p>';
+        return;
+      }
+
+      try {
+        const response = await fetch(`${PORTAL_API}/attendance/student/${encodeURIComponent(registerNumber)}/summary`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const summaries = await response.json();
+        if (!summaries.length) {
+          container.innerHTML = '<p>No attendance has been submitted for your subjects yet.</p>';
+          return;
+        }
+
+        container.style.display = 'none';
+        chartsWrapper.style.display = 'block';
+
+        const labels = summaries.map(s => s.courseName);
+        const percentages = summaries.map(s => s.percentage);
+        const presentData = summaries.map(s => s.presentClasses);
+        const absentData = summaries.map(s => s.absentClasses);
+
+        const overallPresent = presentData.reduce((a, b) => a + b, 0);
+        const overallAbsent = absentData.reduce((a, b) => a + b, 0);
+        const total = overallPresent + overallAbsent;
+
+        if (attendanceBarChart) attendanceBarChart.destroy();
+        const barCtx = document.getElementById('attendanceBarChart').getContext('2d');
+        attendanceBarChart = new Chart(barCtx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Attendance %',
+              data: percentages,
+              backgroundColor: percentages.map(p => p >= 75 ? '#198754' : p >= 50 ? '#fd7e14' : '#dc3545'),
+              borderRadius: 6,
+              barPercentage: 0.7
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+              x: {
+                beginAtZero: true,
+                max: 100,
+                ticks: { font: { size: 10 } },
+                grid: { display: true }
+              },
+              y: {
+                ticks: { font: { size: 10 } }
+              }
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `Present: ${summaries[ctx.dataIndex].presentClasses}/${summaries[ctx.dataIndex].totalClasses} (${ctx.raw}%)`
+                }
+              }
+            }
+          }
+        });
+
+        if (attendanceDonutChart) attendanceDonutChart.destroy();
+        const donutCtx = document.getElementById('attendanceDonutChart').getContext('2d');
+        attendanceDonutChart = new Chart(donutCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Present', 'Absent'],
+            datasets: [{
+              data: [overallPresent, overallAbsent],
+              backgroundColor: ['#198754', '#dc3545'],
+              borderColor: '#fff',
+              borderWidth: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+              legend: { position: 'bottom' },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `${ctx.label}: ${ctx.raw} (${total > 0 ? Math.round(ctx.raw / total * 100) : 0}%)`
+                }
+              }
+            }
+          }
+        });
+
+        recordsSection.style.display = 'block';
+        const recordsContainer = document.getElementById('attendanceRecords');
+        recordsContainer.innerHTML = summaries.map(subject => `
+          <div class="subject-record">
+            <h4>${escapeHtml(subject.courseName)}</h4>
+            <p>Total: ${subject.totalClasses} | Present: ${subject.presentClasses} | Absent: ${subject.absentClasses} | <strong>${subject.percentage}%</strong></p>
+          </div>
+        `).join('');
+
+      } catch (error) {
+        container.innerHTML = `<p style="color:red">Unable to load attendance: ${escapeHtml(error.message)}</p>`;
+        chartsWrapper.style.display = 'none';
+        recordsSection.style.display = 'none';
+      }
+    }
+
+    function getCurrentStudentIdentity() {
+      return {
+        role: 'STUDENT',
+        name: localStorage.getItem('profileName') || localStorage.getItem('studentName') || 'Student',
+        id: localStorage.getItem('profileRegNo') || localStorage.getItem('registerNumber') || localStorage.getItem('studentRegisterNumber') || ''
+      };
+    }
+
+    async function loadMyCourses() {
+      const loadingEl = document.getElementById('loading-courses');
+      const gridEl = document.getElementById('course-grid');
+      const noCoursesEl = document.getElementById('no-courses');
+
+      const registerNumber = getCurrentStudentIdentity().id;
+
+      if (!registerNumber) {
+        loadingEl.style.display = 'none';
+        noCoursesEl.style.display = 'block';
+        return;
+      }
+
+      try {
+        const response = await fetch(`${STUDENTS_API}/by-reg/${encodeURIComponent(registerNumber)}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const student = await response.json();
+        const section = student.section || '';
+
+        if (!section) {
+          loadingEl.style.display = 'none';
+          noCoursesEl.style.display = 'block';
+          return;
+        }
+
+        const courseRes = await fetch(`${COURSES_API}/by-section/${encodeURIComponent(section)}`);
+        if (!courseRes.ok) throw new Error(`HTTP ${courseRes.status}`);
+
+        const courses = await courseRes.json();
+        loadingEl.style.display = 'none';
+
+        if (!courses || courses.length === 0) {
+          noCoursesEl.style.display = 'block';
+          return;
+        }
+
+        gridEl.style.display = 'grid';
+        gridEl.innerHTML = courses.map(course => `
+          <div class="course-card">
+            <h3>${escapeHtml(course.courseCode || course.courseName || 'N/A')}</h3>
+            <p>${escapeHtml(course.courseName || 'N/A')}</p>
+            <span>${escapeHtml(course.facultyName || 'N/A')}</span>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading courses:', error);
+        loadingEl.style.display = 'none';
+        noCoursesEl.style.display = 'block';
+        noCoursesEl.innerHTML = '<p>Unable to load courses. Please ensure you have completed your profile.</p>';
+      }
+    }
+
+    async function loadStudentTimetable() {
+      const registerNumber = getCurrentStudentIdentity().id;
+      const timetableEl = document.getElementById('timetableContainer');
+
+      if (!registerNumber) {
+        timetableEl.innerHTML = '<p style="color:red">Please update your profile with a registration number.</p>';
+        return;
+      }
+
+      const studentRes = await fetch(`${STUDENTS_API}/by-reg/${encodeURIComponent(registerNumber)}`);
+      if (!studentRes.ok) {
+        timetableEl.innerHTML = '<p style="color:red">Unable to load timetable.</p>';
+        return;
+      }
+
+      const student = await studentRes.json();
+      const programName = student.section || '';
+
+      if (!programName) {
+        timetableEl.innerHTML = '<p>No program assigned to your profile.</p>';
+        return;
+      }
+
+      const response = await fetch(`${TIMETABLE_API}/by-program/${encodeURIComponent(programName)}`);
+      if (!response.ok) {
+        timetableEl.innerHTML = '<p style="color:red">Unable to load timetable.</p>';
+        return;
+      }
+
+      const timetableData = await response.json();
+      if (!timetableData || timetableData.length === 0) {
+        timetableEl.innerHTML = '<p>No timetable assigned yet.</p>';
+        return;
+      }
+
+      const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+      const programMap = {};
+      timetableData.forEach(item => {
+        const prog = item.programName || "Unknown Program";
+        if (!programMap[prog]) programMap[prog] = {};
+        programMap[prog][item.day] = item;
+      });
+
+      let html = '';
+      Object.keys(programMap).forEach(programName => {
+        const daysMap = programMap[programName];
+        html += `<div class="program-section"><h3>${escapeHtml(programName)}</h3><table class="table"><thead><tr>
+          <th>Day</th><th>Slot 1</th><th>Slot 2</th><th>Slot 3</th><th>Slot 4</th>
+          <th>Slot 5</th><th>Slot 6</th><th>Slot 7</th><th>Slot 8</th><th>Slot 9</th><th>Slot 10</th>
+        </tr></thead><tbody>`;
+        daysOrder.forEach(day => {
+          const data = daysMap[day] || {};
+          html += `<tr><td><strong>${day}</strong></td>`;
+          for (let i = 1; i <= 10; i++) {
+            html += `<td>${escapeHtml(data['slot' + i] || '')}</td>`;
+          }
+          html += `</tr>`;
+        });
+        html += `</tbody></table></div>`;
+      });
+
+      timetableEl.innerHTML = html;
+    }
+
+    async function loadStudentFees() {
+      const loadingEl = document.getElementById('loading-fees');
+      const feeTable = document.getElementById('feeTable');
+      const feeTableBody = document.getElementById('feeTableBody');
+      const paymentForm = document.getElementById('paymentForm');
+      const program = document.getElementById('sectionSelect').value;
+
+      if (!program) {
+        loadingEl.innerHTML = '<p style="color:red">Please select a program to view fees.</p>';
+        return;
+      }
+
+      try {
+        const response = await fetch(`${FEE_API}/by-program/${encodeURIComponent(program)}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const fees = await response.json();
+        loadingEl.style.display = 'none';
+        feeTable.style.display = 'table';
+        paymentForm.style.display = 'block';
+
+        if (!fees || fees.length === 0) {
+          feeTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">No fee records found.</td></tr>';
+          document.getElementById('totalFees').textContent = '0';
+          document.getElementById('totalPaid').textContent = '0';
+          document.getElementById('totalBalance').textContent = '0';
+          return;
+        }
+
+        let totalFees = 0;
+        let totalPaid = 0;
+
+          feeTableBody.innerHTML = fees.map((fee, index) => {
+          const feeAmount = fee.fees || 0;
+          const paidAmount = fee.paid || 0;
+          const balance = feeAmount - paidAmount;
+          totalFees += feeAmount;
+          totalPaid += paidAmount;
+          return `
+            <tr>
+              <td>${index + 1}</td>
+              <td class="editable">${escapeHtml(fee.categoryName || 'N/A')}</td>
+              <td class="editable">${feeAmount}</td>
+              <td class="editable">${paidAmount}</td>
+              <td class="editable">${balance}</td>
+            </tr>
+          `;
+        }).join('');
+
+        document.getElementById('totalFees').textContent = totalFees;
+        document.getElementById('totalPaid').textContent = totalPaid;
+        document.getElementById('totalBalance').textContent = totalFees - totalPaid;
+      } catch (error) {
+        loadingEl.innerHTML = `<p style="color:red">Unable to load fees: ${escapeHtml(error.message)}</p>`;
+        feeTable.style.display = 'none';
+        paymentForm.style.display = 'none';
+      }
+    }
+
+    async function sendInternalMail(form, files, sender) {
+      const attachments = await Promise.all(files.map(file => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve({ fileName: file.name, contentType: file.type || 'application/octet-stream', size: file.size, data: reader.result });
+        reader.onerror = () => reject(new Error(`Unable to read attachment ${file.name}`));
+        reader.readAsDataURL(file);
+      })));
+      const payload = {
+        senderRole: sender.role,
+        senderName: sender.name,
+        senderId: sender.id,
+        recipientRole: form.querySelector('[name="recipientRole"]').value,
+        recipientName: form.querySelector('[name="recipientName"]').value,
+        recipientId: form.querySelector('[name="recipientId"]').value,
+        subject: form.querySelector('[name="subject"]').value,
+        body: form.querySelector('[name="description"]').value,
+        attachments
+      };
+
+      if (!payload.senderId) {
+        throw new Error('Your profile/register number is missing. Please complete your profile before sending mail.');
+      }
+
+      const response = await fetch(`${PORTAL_API}/mail/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `HTTP ${response.status}`);
+      }
+    }
+
+    async function loadMailbox(role, id, containerId) {
+      const container = document.getElementById(containerId);
+      if (!id) {
+        container.innerHTML = '<p>Please complete your profile ID to view your mailbox.</p>';
+        return;
+      }
+
+      try {
+        const response = await fetch(`${PORTAL_API}/mail/inbox?role=${encodeURIComponent(role)}&id=${encodeURIComponent(id)}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const messages = await response.json();
+        container.innerHTML = messages.length ? messages.map(message => `
+          <div class="draft-item">
+            <strong>${escapeHtml(message.subject)}</strong>
+            <p>${escapeHtml(message.body)}</p>
+            <small>From ${escapeHtml(message.senderName)} (${escapeHtml(message.senderId)}) - ${new Date(message.createdAt).toLocaleString()}</small>
+          </div>
+        `).join('') : '<p>No application mails yet.</p>';
+      } catch (error) {
+        container.innerHTML = `<p style="color:red">Unable to load mailbox: ${escapeHtml(error.message)}</p>`;
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    // Email Shared file attachment logic
+    // Logic for Student Email
+function setupStudentMail(formId, fileInputId, attachedFilesId, setupShareLogicCallback) {
+  // Get DOM elements
+  const fileInputStudent = document.getElementById(fileInputId);
+  const attachedFilesDivStudent = document.getElementById(attachedFilesId);
+  const formStudent = document.getElementById(formId);
+  const modalStudent = document.getElementById('image-modal-student');
+  const modalImageStudent = document.getElementById('modal-image-student');
+  const modalCloseStudent = document.querySelector('#image-modal-student .modal-close');
+  const shareButtonStudent = formStudent.querySelector('.share-btn');
+  const draftButtonStudent = formStudent.querySelector('.draft-btn');
+  const draftCountStudent = document.getElementById('draft-count-student');
+  const draftModalStudent = document.getElementById('draft-modal-student');
+  const draftModalCloseStudent = document.getElementById('draft-modal-close-student');
+  const draftListStudent = document.getElementById('draft-list-student');
+  let studentHomeFiles = [];
+  let studentHomeDrafts = JSON.parse(localStorage.getItem('studentHomeEmailDrafts')) || [];
+  let isSendingStudentHome = false;
+  const studentHomePreviewUrls = new Map();
+
+  // Update draft count badge
+  function updateDraftCountStudentHome() {
+    draftCountStudent.textContent = studentHomeDrafts.length;
+    draftCountStudent.style.display = studentHomeDrafts.length > 0 ? 'inline-block' : 'none';
+  }
+
+  // Initialize draft count
+  updateDraftCountStudentHome();
+
+  // Update share button state
+  function updateShareButtonStateStudentHome() {
+    const subject = formStudent.querySelector('input[name="subject"]').value.trim();
+    const description = formStudent.querySelector('textarea[name="description"]').value.trim();
+    shareButtonStudent.disabled = !(subject || description || studentHomeFiles.length > 0);
+  }
+
+  // Convert file to base64
+  async function convertToBase64StudentHome(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Convert base64 to File
+  function base64ToFileStudentHome(base64, filename, mimeType) {
+    const byteString = atob(base64.split(',')[1]);
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i);
+    }
+    return new File([ab], filename, { type: mimeType });
+  }
+
+  // Save draft
+  async function saveDraftStudentHome() {
+    const subject = formStudent.querySelector('input[name="subject"]').value.trim();
+    const description = formStudent.querySelector('textarea[name="description"]').value.trim();
+    if ((subject || description || studentHomeFiles.length > 0) && !isSendingStudentHome) {
+      const fileData = await Promise.all(
+        studentHomeFiles.map(async file => ({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          data: await convertToBase64StudentHome(file)
+        }))
+      );
+      const draft = {
+        id: Date.now(),
+        subject,
+        description,
+        files: fileData,
+        timestamp: new Date().toISOString()
+      };
+      studentHomeDrafts = studentHomeDrafts.filter(d => d.subject !== subject || d.description !== description);
+      studentHomeDrafts.push(draft);
+      localStorage.setItem('studentHomeEmailDrafts', JSON.stringify(studentHomeDrafts));
+      updateDraftCountStudentHome();
+    }
+  }
+
+  // Display drafts
+  function displayDraftsStudentHome() {
+    draftListStudent.innerHTML = '';
+    studentHomeDrafts.forEach((draft, index) => {
+      const draftElement = document.createElement('div');
+      draftElement.classList.add('draft-item');
+      const fileNames = draft.files.map(file => file.name).join(', ');
+      const descriptionPreview = draft.description ? draft.description.split('\n')[0].substring(0, 50) + (draft.description.length > 50 ? '...' : '') : 'No Content';
+      draftElement.innerHTML = `
+        <div class="draft-content">
+          <strong>${draft.subject || 'No Subject'}</strong>
+          <p>${descriptionPreview}</p>
+          ${draft.files.length > 0 ? `<small>Files: ${fileNames}</small>` : ''}
+          <small>${new Date(draft.timestamp).toLocaleString()}</small>
+        </div>
+        <div class="draft-actions">
+          <button class="load-draft" data-index="${index}">re-write</button>
+          <button class="delete-draft" data-index="${index}">Delete</button>
+        </div>
+      `;
+      draftListStudent.appendChild(draftElement);
+    });
+
+    // Event listeners for draft actions
+    draftListStudent.addEventListener('click', async (e) => {
+      const loadButton = e.target.closest('.load-draft');
+      const deleteButton = e.target.closest('.delete-draft');
+      if (loadButton) {
+        const index = parseInt(loadButton.dataset.index, 10);
+        const draft = studentHomeDrafts[index];
+        formStudent.querySelector('input[name="subject"]').value = draft.subject || '';
+        formStudent.querySelector('textarea[name="description"]').value = draft.description || '';
+        studentHomeFiles = await Promise.all(
+          draft.files.map(file => base64ToFileStudentHome(file.data, file.name, file.type))
+        );
+        updateAttachedFilesDisplayStudentHome();
+        updateShareButtonStateStudentHome();
+        draftModalStudent.style.display = 'none';
+      }
+      if (deleteButton) {
+        const index = parseInt(deleteButton.dataset.index, 10);
+        studentHomeDrafts.splice(index, 1);
+        localStorage.setItem('studentHomeEmailDrafts', JSON.stringify(studentHomeDrafts));
+        updateDraftCountStudentHome();
+        displayDraftsStudentHome();
+      }
+    });
+  }
+
+  // Handle file selection
+  fileInputStudent.addEventListener('change', (event) => {
+    const files = Array.from(event.target.files);
+    studentHomeFiles = [...studentHomeFiles, ...files];
+    updateAttachedFilesDisplayStudentHome();
+    updateShareButtonStateStudentHome();
+  });
+
+  // Update attached files display
+  function updateAttachedFilesDisplayStudentHome() {
+    attachedFilesDivStudent.innerHTML = '';
+    studentHomePreviewUrls.forEach(url => URL.revokeObjectURL(url));
+    studentHomePreviewUrls.clear();
+
+    studentHomeFiles.forEach((file, index) => {
+      const fileElement = document.createElement('div');
+      fileElement.classList.add('file-item');
+
+      let previewUrl, isImage, fileTypeClass;
+      if (file.type.startsWith('image/')) {
+        previewUrl = URL.createObjectURL(file);
+        studentHomePreviewUrls.set(index, previewUrl);
+        isImage = true;
+        fileTypeClass = 'image';
+      } else if (file.type === 'application/pdf') {
+        previewUrl = '../Images/mail_Icons/pdf.png';
+        isImage = false;
+        fileTypeClass = 'pdf';
+      } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        previewUrl = '../Images/mail_Icons/docx.png';
+        isImage = false;
+        fileTypeClass = 'docx';
+      } else {
+        previewUrl = '../Images/mail_Icons/txt.png';
+        isImage = false;
+        fileTypeClass = 'generic';
+      }
+
+      const fileName = file.name.length > 20 ? file.name.substring(0, 17) + '...' : file.name;
+
+      fileElement.innerHTML = `
+        <div class="file-preview ${fileTypeClass}">
+          <img src="${previewUrl}" alt="File preview" class="attached-img">
+          <div class="file-overlay">
+            <button type="button" class="view-file" data-index="${index}" data-is-image="${isImage}">
+              <i class="fas fa-eye"></i>
+            </button>
+            <button type="button" class="remove-file" data-index="${index}">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <span class="file-name">${fileName}</span>
+        </div>
+      `;
+      attachedFilesDivStudent.appendChild(fileElement);
+    });
+
+    // Event delegation for view and remove buttons
+    attachedFilesDivStudent.addEventListener('click', (e) => {
+      const viewButton = e.target.closest('.view-file');
+      const removeButton = e.target.closest('.remove-file');
+
+      if (viewButton) {
+        const index = parseInt(viewButton.dataset.index, 10);
+        const isImage = viewButton.dataset.isImage === 'true';
+        const file = studentHomeFiles[index];
+
+        if (isImage) {
+          modalImageStudent.src = URL.createObjectURL(file);
+          modalStudent.style.display = 'flex';
+        } else {
+          const url = URL.createObjectURL(file);
+          window.open(url, '_blank');
+          setTimeout(() => URL.revokeObjectURL(url), 0);
+        }
+      }
+
+      if (removeButton) {
+        const index = parseInt(removeButton.dataset.index, 10);
+        if (studentHomePreviewUrls.has(index)) {
+          URL.revokeObjectURL(studentHomePreviewUrls.get(index));
+          studentHomePreviewUrls.delete(index);
+        }
+        studentHomeFiles.splice(index, 1);
+        updateAttachedFilesDisplayStudentHome();
+        updateShareButtonStateStudentHome();
+      }
+    });
+  }
+
+  // Save draft on page unload
+  window.addEventListener('beforeunload', async () => {
+    if (!isSendingStudentHome) {
+      await saveDraftStudentHome();
+    }
+  });
+
+  // Open draft modal
+  draftButtonStudent.addEventListener('click', () => {
+    displayDraftsStudentHome();
+    draftModalStudent.style.display = 'flex';
+  });
+
+  // Close draft modal
+  draftModalCloseStudent.addEventListener('click', () => {
+    draftModalStudent.style.display = 'none';
+  });
+
+  draftModalStudent.addEventListener('click', (e) => {
+    if (e.target === draftModalStudent) {
+      draftModalStudent.style.display = 'none';
+    }
+  });
+
+  // Close image modal
+  modalCloseStudent.addEventListener('click', () => {
+    modalStudent.style.display = 'none';
+    URL.revokeObjectURL(modalImageStudent.src);
+  });
+
+  modalStudent.addEventListener('click', (e) => {
+    if (e.target === modalStudent) {
+      modalStudent.style.display = 'none';
+      URL.revokeObjectURL(modalImageStudent.src);
+    }
+  });
+
+  // Handle form submission
+  formStudent.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    isSendingStudentHome = true;
+    try {
+      await sendInternalMail(formStudent, studentHomeFiles, getCurrentStudentIdentity());
+      studentHomeDrafts = studentHomeDrafts.filter(d => d.subject !== formStudent.querySelector('input[name="subject"]').value ||
+                                              d.description !== formStudent.querySelector('textarea[name="description"]').value);
+      localStorage.setItem('studentHomeEmailDrafts', JSON.stringify(studentHomeDrafts));
+      updateDraftCountStudentHome();
+      formStudent.reset();
+      studentHomeFiles = [];
+      updateAttachedFilesDisplayStudentHome();
+      updateShareButtonStateStudentHome();
+      alert('Mail sent inside the application.');
+    } catch (error) {
+      alert(`Mail failed: ${error.message}`);
+    } finally {
+      isSendingStudentHome = false;
+    }
+  });
+
+  formStudent.querySelector('.inbox-btn').addEventListener('click', () => {
+    const student = getCurrentStudentIdentity();
+    loadMailbox(student.role, student.id, 'student-mailbox');
+  });
+
+  // Clear attached files on form reset
+  formStudent.addEventListener('reset', () => {
+    studentHomeFiles = [];
+    studentHomePreviewUrls.forEach(url => URL.revokeObjectURL(url));
+    studentHomePreviewUrls.clear();
+    updateAttachedFilesDisplayStudentHome();
+    updateShareButtonStateStudentHome();
+  });
+
+  // Initialize share button
+  updateShareButtonStateStudentHome();
+
+  // Set up share logic
+  setupShareLogicCallback(studentHomeFiles);
+}
+
+// Share logic for Student Email
+function setupShareMail(attachedFilesStudent) {
+  const form = document.getElementById('studentEmailForm');
+  const shareButton = form.querySelector('.share-btn');
+  const shareModal = document.getElementById('share-modal-student');
+  const closeModal = document.getElementById('share-modal-close-student');
+  const shareConfirm = document.getElementById('share-confirm-student');
+  const shareOptions = document.querySelectorAll('#share-modal-student .share-option');
+  let selectedPlatform = null;
+
+  async function convertToBase64Student(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  shareButton.addEventListener('click', () => {
+    const subject = form.querySelector('input[name="subject"]').value.trim();
+    const description = form.querySelector('textarea[name="description"]').value.trim();
+    if (!subject && !description && attachedFilesStudent.length === 0) {
+      alert('Please add a subject, description, or file to share.');
+      return;
+    }
+    if (!shareButton.disabled) {
+      shareModal.style.display = 'flex';
+    }
+  });
+
+  closeModal.addEventListener('click', () => {
+    shareModal.style.display = 'none';
+    selectedPlatform = null;
+    shareOptions.forEach(option => option.classList.remove('selected'));
+  });
+
+  shareModal.addEventListener('click', (e) => {
+    if (e.target === shareModal) {
+      shareModal.style.display = 'none';
+      selectedPlatform = null;
+      shareOptions.forEach(option => option.classList.remove('selected'));
+    }
+  });
+
+  shareOptions.forEach(option => {
+    option.addEventListener('click', () => {
+      shareOptions.forEach(opt => opt.classList.remove('selected'));
+      option.classList.add('selected');
+      selectedPlatform = option.getAttribute('data-platform');
+    });
+  });
+
+  shareConfirm.addEventListener('click', async () => {
+    if (!selectedPlatform) {
+      alert('Please select a platform to share.');
+      return;
+    }
+
+    const subject = form.querySelector('input[name="subject"]').value || 'No Subject';
+    const description = form.querySelector('textarea[name="description"]').value || 'No Description';
+    let shareText = `${subject}\n\n${description}`;
+
+    let fileLinks = '';
+    let filesToShare = [];
+    if (attachedFilesStudent.length > 0) {
+      fileLinks = '\n\nAttached Files:\n';
+      filesToShare = await Promise.all(
+        attachedFilesStudent.map(async file => {
+          try {
+            if (file.size > 5 * 1024 * 1024) {
+              fileLinks += `${file.name}: [File too large to share]\n`;
+              return null;
+            }
+            const fileDataUrl = await convertToBase64Student(file);
+            fileLinks += `${file.name}: [Attachment]\n`;
+            return { file, dataUrl: fileDataUrl };
+          } catch (error) {
+            console.error('Error converting file to data URL:', error);
+            fileLinks += `${file.name}: [Error processing file]\n`;
+            return null;
+          }
+        })
+      );
+      filesToShare = filesToShare.filter(file => file !== null);
+    }
+
+    shareText += fileLinks;
+
+    switch (selectedPlatform) {
+      case 'whatsapp':
+        if (shareText.length > 2000) {
+          alert('Content exceeds WhatsApp character limit (2000). Please shorten the message.');
+          return;
+        }
+        if ('share' in navigator && filesToShare.length > 0) {
+          const shareData = {
+            title: subject,
+            text: description,
+            files: filesToShare.map(item => item.file)
+          };
+          try {
+            await navigator.share(shareData);
+          } catch (error) {
+            console.error('Error sharing via Web Share API:', error);
+            alert('Failed to share via WhatsApp. Please try again.');
+          }
+        } else {
+          const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+          window.open(whatsappUrl, '_blank');
+        }
+        break;
+
+      case 'x':
+        if (shareText.length > 280) {
+          alert('Content exceeds X character limit (280). Please shorten the message.');
+          return;
+        }
+        const xUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+        window.open(xUrl, '_blank');
+        break;
+
+      case 'gmail':
+        const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(shareText)}`;
+        window.open(gmailUrl, '_blank');
+        break;
+
+      case 'outlook':
+        const outlookUrl = `https://outlook.live.com/mail/0/deeplink/compose?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(shareText)}`;
+        window.open(outlookUrl, '_blank');
+        break;
+
+      default:
+        alert('Invalid platform selected.');
+        return;
+    }
+
+    shareModal.style.display = 'none';
+    selectedPlatform = null;
+    shareOptions.forEach(option => option.classList.remove('selected'));
+  });
+}
+
+  </script>
+</head>
+<body>
+  <div class="container">
+    <nav class="navbar">
+      <div class="logo-container">
+        <img src="./Images/PresidencyImages/logo.png" alt="Presidency Logo" class="logo">
+      </div>
+      <ul class="nav-list">
+        <li>
+          <a href="#" class="nav-link" data-content="home">
+            <span class="home">Course</span>
+            <img src="./Images/course.png" alt="Course Icon" class="nav-icon">
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-link" data-content="timetables">
+            <span class="timetable">Timetables</span>
+            <img src="./Images/timetable.png" alt="Timetable Icon" class="nav-icon">
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-link" data-content="academic_calendar">
+            <span class="AcademicCalendar">Academic Calendar</span>
+            <img src="./Images/calendar.png" alt="Academic Calendar Icon" class="nav-icon">
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-link" data-content="attendance">
+            <span class="Attendance">Attendance</span>
+            <img src="./Images/attendance.png" alt="Attendance Icon" class="nav-icon">
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-link" data-content="my_fee">
+            <span class="myFee">My Fee</span>
+            <img src="./Images/fee.png" alt="My Fee Icon" class="nav-icon">
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-link" data-content="students_email">
+            <span class="email">Mail</span>
+            <img src="./Images/email.png" alt="Email Icon" class="nav-icon">
+          </a>
+        </li>
+        <li><br><br><br><br>
+          <a href="#" class="nav-link" data-content="profile">
+            <span class="profile">Profile</span>
+            <img src="./Images/profile.png" alt="Profile Icon" class="nav-icon">
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-link" data-content="logout">
+            <span class="logout">Logout</span>
+            <img src="./Images/logout.png" alt="Logout Icon" class="nav-icon">
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+
+  <div class="containerr">
+    <header class="header" id="mainHeader">
+      <button id="menuToggle" class="menu-toggle">☰</button>
+      <h1>Presidency University, Bengaluru</h1>
+      <span id="headerProfile">
+        <span id="headerProfileName" style="font-weight:bold;margin-right:10px;"></span>
+        <img id="headerProfileImg" src=" " alt="Profile" style="width:40px; height:40px; border-radius:50%; vertical-align:middle; margin-right:0px;">
+      </span>
+    </header>
+    <main class="content">
+    </main>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</body>
+</html>

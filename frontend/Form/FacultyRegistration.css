@@ -1,0 +1,239 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+body {
+    font-family: 'Plus Jakarta Sans', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f8fafc;
+    color: #1e293b;
+    overflow-x: hidden;
+}
+
+.container {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+}
+
+.image-container {
+    flex: 1.2;
+    position: relative;
+    display: block;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.8s ease;
+}
+
+.image-container:hover img {
+    transform: scale(1.03);
+}
+
+.Signup-container {
+    flex: 0.9;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px;
+    background-color: #ffffff;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.03);
+    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.Signup-container h1 {
+    color: darkslategrey;
+    font-size: 32px;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.Signup-container p {
+    color: #64748b;
+    font-size: 16px;
+    margin-top: 0;
+    margin-bottom: 24px;
+}
+
+.input-field {
+    margin-bottom: 18px;
+    position: relative;
+}
+
+.input-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #475569;
+}
+
+.input-field input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+}
+
+.input-field input:focus {
+    border-color: darkslategrey;
+    box-shadow: 0 0 0 4px rgba(47, 79, 79, 0.1);
+    outline: none;
+}
+
+button {
+    background-color: darkslategrey;
+    color: white;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+    width: 100%;
+    margin-top: 10px;
+    margin-bottom: 16px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+button:hover {
+    background-color: #1e3333;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(47, 79, 79, 0.2);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+a {
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.form-message {
+    display: none;
+    padding: 11px 14px;
+    margin: -6px 0 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    animation: fadeInUp 0.25s ease;
+}
+
+.form-message.error {
+    display: block;
+    color: #e11d48;
+    background: #fff1f2;
+    border: 1px solid #fda4af;
+}
+
+.form-message.success {
+    display: block;
+    color: #166534;
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+}
+
+.form-message.info {
+    display: block;
+    color: #1d4ed8;
+    background: #eff6ff;
+    border: 1px solid #93c5fd;
+}
+
+.google-auth-button {
+    display: flex;
+    justify-content: center;
+    min-height: 44px;
+    margin: 2px 0 16px;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.75;
+    transform: none;
+}
+
+/* Validation styling */
+.validation-message {
+    font-size: 12px;
+    margin-top: 4px;
+    display: none;
+    font-weight: 500;
+}
+
+.validation-message.error {
+    color: #e11d48;
+    display: block;
+}
+
+.validation-message.success {
+    color: #16a34a;
+    display: block;
+}
+
+input.invalid-field {
+    border-color: #e11d48 !important;
+    background-color: #fff1f2;
+}
+
+input.valid-field {
+    border-color: #16a34a !important;
+    background-color: #f0fdf4;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 1024px) {
+    .image-container {
+        display: none;
+    }
+    .container {
+        justify-content: center;
+        align-items: center;
+        background-color: #f8fafc;
+        padding: 20px;
+    }
+    .Signup-container {
+        flex: none;
+        width: 100%;
+        max-width: 440px;
+        padding: 40px 30px;
+        border-radius: 16px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        background-color: #ffffff;
+    }
+}
+
+@media (max-width: 480px) {
+    .Signup-container {
+        padding: 30px 20px;
+    }
+    .Signup-container h1 {
+        font-size: 26px;
+    }
+    .google-auth-button {
+        justify-content: stretch;
+    }
+}
+

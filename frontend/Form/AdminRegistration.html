@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presidency University</title>
+    <link rel="stylesheet" href="AdminRegistration.css">
+</head>
+<body>
+    <div class="container">
+        <div class="image-container">
+            <img src="../Images/PresidencyImages/FormPages.jpg" alt="Presidency University">
+        </div>
+        <div class="Signup-container">
+            <h1>Presidency University</h1>
+            <p>Admin Registration</p>
+            <div id="formMessage" class="form-message" role="status" aria-live="polite"></div>
+
+            <form id="SignupForm" method="post">
+                <div class="input-field">
+                    <label for="adminid">Admin Name</label>
+                    <input type="text" id="adminid" name="adminid" placeholder="Enter Name" required>
+                </div>
+                <div class="input-field">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter Password" required>
+                </div>
+                <button type="submit" id="registerBtn">Register</button>
+                <div id="adminRegisterGoogleButton" class="google-auth-button"></div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="googleAuth.js"></script>
+    <script>
+        const validations = {
+            adminid: {
+                regex: /^[a-zA-Z][a-zA-Z0-9\s!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]*$/,
+                errorMsg: 'Name must start with an alphabet letter.'
+            },
+            password: {
+                regex: /^.{6,20}$/,
+                errorMsg: 'Password must be 6-20 characters.'
+            }
+        };
+
+        Object.keys(validations).forEach(fieldId => {
+            const input = document.getElementById(fieldId);
+            const span = document.createElement('span');
+            span.className = 'validation-message';
+            span.id = `${fieldId}-validation`;
+            input.parentNode.appendChild(span);
+
+            const validate = () => {
+                const config = validations[fieldId];
+                if (config.regex.test(input.value.trim())) {
+                    span.textContent = 'Looks good!';
+                    span.className = 'validation-message success';
+                    input.classList.remove('invalid-field');
+                    input.classList.add('valid-field');
+                    return true;
+                }
+
+                span.textContent = config.errorMsg;
+                span.className = 'validation-message error';
+                input.classList.remove('valid-field');
+                input.classList.add('invalid-field');
+                return false;
+            };
+
+            input.addEventListener('input', () => {
+                clearFormMessage();
+                validate();
+            });
+            input.addEventListener('blur', validate);
+        });
+
+        document.getElementById('SignupForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            clearFormMessage();
+
+            const isFormValid = Object.keys(validations).every(fieldId =>
+                validations[fieldId].regex.test(document.getElementById(fieldId).value.trim()));
+
+            if (!isFormValid) {
+                showFormMessage('Please correct the highlighted fields.', 'error');
+                return;
+            }
+
+            const registerBtn = document.getElementById('registerBtn');
+            registerBtn.disabled = true;
+            registerBtn.textContent = 'Registering...';
+
+            try {
+                const response = await fetch('http://localhost:9093/Admin/Admin_Register/AdminRegister', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: document.getElementById('adminid').value.trim(),
+                        password: document.getElementById('password').value.trim()
+                    })
+                });
+                const resultText = await response.text();
+
+                if (!response.ok) {
+                    showFormMessage(resultText || 'Registration failed. Please try again.', 'error');
+                    return;
+                }
+
+                showFormMessage(resultText || 'Admin registered successfully. Redirecting...', 'success');
+                setTimeout(() => {
+                    window.location.href = './AdminLogin.html';
+                }, 900);
+            } catch (error) {
+                console.error('Admin registration error:', error);
+                showFormMessage('Something went wrong. Please make sure the admin service is running.', 'error');
+            } finally {
+                registerBtn.disabled = false;
+                registerBtn.textContent = 'Register';
+            }
+        });
+
+        setupGoogleAuth({
+            buttonId: 'adminRegisterGoogleButton',
+            role: 'ADMIN',
+            redirectUrl: '../AdminHomePage.html'
+        });
+    </script>
+</body>
+</html>

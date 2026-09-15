@@ -62,6 +62,9 @@ public class FacultyRegister_Controller {
     @PostMapping("/FacultyLogin")
     public ResponseEntity<String> login(@RequestBody FacultyRegister_Entity loginRequest) {
         try {
+            if (loginRequest == null) {
+                return ResponseEntity.badRequest().body("Login details are required");
+            }
             String inputName = loginRequest.getName();
             String inputRegisterNo = loginRequest.getRegisterNumber();
             String inputPassword = loginRequest.getPassword();

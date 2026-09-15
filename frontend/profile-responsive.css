@@ -1,0 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+body { min-height: 100vh; display: grid; place-items: center; padding: clamp(14px, 4vw, 44px) !important; background: radial-gradient(circle at 12% 8%, #f6bd60 0, transparent 25%), #f7f4ea !important; color: #16324f; font-family: 'DM Sans', sans-serif !important; }
+.container { width: min(100%, 560px) !important; max-width: none !important; padding: clamp(20px, 4vw, 38px) !important; border: 1px solid #dbe6e2; border-radius: 22px !important; box-shadow: 0 18px 45px rgba(22, 50, 79, .12) !important; }
+.container h1, .container h2 { color: #16324f; font-family: 'Space Grotesk', sans-serif; }
+.container input, .container select { width: 100%; max-width: 100%; box-sizing: border-box; border: 1px solid #dbe6e2; border-radius: 10px; padding: 11px 13px; }
+.container button { max-width: 100%; border: 0; border-radius: 12px; padding: 12px 16px; background: #16324f; color: #fff; cursor: pointer; }
+.container button:hover { background: #e07a5f; }
+#imageSpace { max-width: 100%; overflow: hidden; border-radius: 16px; }
+#imageSpace img { max-width: 100%; height: auto; object-fit: cover; }
+@media (max-width: 480px) { .container { padding: 20px !important; } }

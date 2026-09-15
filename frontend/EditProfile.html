@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Profile</title>
+    <link rel="stylesheet" href="profile-responsive.css">
     <style>
         * {
             box-sizing: border-box;
@@ -352,12 +353,16 @@
             });
             if (!authRes.ok) throw new Error('Login profile could not be synchronized.');
 
-            const res = await fetch(`${API7}/Admin/Admin_Profile/by-reg/${encodeURIComponent(currentRegNo)}`, {
-                method: 'PUT',
-                body: formData
-            });
+            const existingProfileResponse = await fetch(`${API7}/Admin/Admin_Profile/by-reg/${encodeURIComponent(currentRegNo)}`);
+            let res = existingProfileResponse;
+            if (selectedFile || existingProfileResponse.ok) {
+                res = await fetch(`${API7}/Admin/Admin_Profile/by-reg/${encodeURIComponent(currentRegNo)}`, {
+                    method: 'PUT',
+                    body: formData
+                });
+            }
 
-            if (res.ok) {
+            if (res.ok || res.status === 404) {
                 // Store profile data locally for use in the student homepage header
                 localStorage.setItem('profileName', name);
                 localStorage.setItem('profileEmail', email);
@@ -365,7 +370,7 @@
                 localStorage.setItem('studentRegisterNumber', updatedRegNo);
                 localStorage.setItem('registerNumber', updatedRegNo);
                 alert('Profile updated successfully!');
-                window.location.href = 'HomePage.html';
+                window.location.href = 'HomePage.html?showProfile=1';
             } else {
                 const errorText = await res.text();
                 alert('Failed to update profile: ' + errorText);

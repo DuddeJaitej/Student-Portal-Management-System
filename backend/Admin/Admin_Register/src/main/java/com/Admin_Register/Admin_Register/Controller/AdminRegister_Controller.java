@@ -29,6 +29,9 @@ public class AdminRegister_Controller {
 	
 	@PostMapping("/AdminRegister")
 	public ResponseEntity<String> register(@RequestBody AdminRegister_Entity adminRegister) {
+		if (adminRegister == null || isBlank(adminRegister.getName()) || isBlank(adminRegister.getPassword())) {
+			return ResponseEntity.badRequest().body("Admin name and password are required");
+		}
 		adminRegister.setPassword(encoder.encode(adminRegister.getPassword()));
 		repo.save(adminRegister);
 		return ResponseEntity.ok("Admin Registered Successfully");
@@ -37,6 +40,9 @@ public class AdminRegister_Controller {
 	@PostMapping("/AdminLogin")
 	public ResponseEntity<String> login(@RequestBody AdminRegister_Entity adminLogin) {
 	    try {
+	        if (adminLogin == null || isBlank(adminLogin.getName()) || isBlank(adminLogin.getPassword())) {
+	            return ResponseEntity.badRequest().body("Admin name and password are required");
+	        }
 	        AdminRegister_Entity dbAdmin = repo.findByName(adminLogin.getName())
 	                .orElseThrow(() -> new RuntimeException("User not Found"));
 
@@ -55,6 +61,10 @@ public class AdminRegister_Controller {
 	        e.printStackTrace();
 	        return ResponseEntity.badRequest().body("Login failed: " + e.getMessage());
 	    }
+	}
+
+	private boolean isBlank(String value) {
+		return value == null || value.trim().isEmpty();
 	}
 	
 }

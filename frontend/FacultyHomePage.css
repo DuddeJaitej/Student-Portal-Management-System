@@ -1195,6 +1195,37 @@ h1 {
   margin-top: 20px;
 }
 
+.faculty-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2000;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 14px 18px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  box-shadow: 0 8px 24px rgba(25, 42, 56, 0.2);
+  opacity: 0;
+  transform: translateY(16px);
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.faculty-toast-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.faculty-toast-success {
+  background: #218838;
+}
+
+.faculty-toast-error {
+  background: #c0392b;
+}
+
 @media (max-width: 768px) {
   .attendance-toolbar {
     grid-template-columns: 1fr;

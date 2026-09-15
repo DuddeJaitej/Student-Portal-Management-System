@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Presidency University</title>
+  <title>Campus Flow Portal | Faculty</title>
   <link rel="stylesheet" href="FacultyHomePage.css">
+  <link rel="stylesheet" href="portal-responsive.css">
   <script>
 
     const home = "http://localhost:9071";
@@ -15,6 +16,23 @@
     const PORTAL_API = "http://localhost:9110/portal";
     const FACULTY_PROFILE_API = "http://localhost:9102/Admin/Admin_Faculty";
     const FACULTY_COURSE_API = "http://localhost:9095/admin/admin-faculty-course";
+
+    function showFacultyToast(message, type = 'success') {
+      let toast = document.getElementById('facultyToast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'facultyToast';
+        toast.className = 'faculty-toast';
+        document.body.appendChild(toast);
+      }
+
+      toast.textContent = message;
+      toast.className = `faculty-toast faculty-toast-${type} faculty-toast-visible`;
+      clearTimeout(showFacultyToast.timeout);
+      showFacultyToast.timeout = setTimeout(() => {
+        toast.classList.remove('faculty-toast-visible');
+      }, 4000);
+    }
 
     async function refreshFacultyProfile() {
       const registerNo = localStorage.getItem('registerNumber') || localStorage.getItem('profileRegNo');
@@ -584,7 +602,7 @@ dateInput.addEventListener('change', function () {
 // Submit attendance to the application backend.
 document.getElementById('attendanceSubmitBtn').onclick = async function () {
     if (isFuture(dateInput.value)) {
-        alert('Cannot submit attendance for a future date.');
+    showFacultyToast('Cannot submit attendance for a future date.', 'error');
         return;
     }
 
@@ -593,12 +611,12 @@ document.getElementById('attendanceSubmitBtn').onclick = async function () {
     const facultyRegisterNumber = localStorage.getItem('registerNumber') || localStorage.getItem('profileRegNo') || '';
 
     if (!assignment) {
-      alert('Please select one of your assigned courses.');
+      showFacultyToast('Please select one of your assigned courses.', 'error');
         return;
     }
 
     if (!facultyRegisterNumber) {
-        alert('Faculty register number is missing. Please login again.');
+      showFacultyToast('Faculty register number is missing. Please login again.', 'error');
         return;
     }
 
@@ -630,9 +648,9 @@ document.getElementById('attendanceSubmitBtn').onclick = async function () {
             throw new Error(text || `HTTP ${response.status}`);
         }
 
-        alert('Attendance submitted for ' + dateInput.value);
+        showFacultyToast('Attendance submitted for ' + dateInput.value, 'success');
     } catch (error) {
-        alert('Attendance submit failed: ' + error.message);
+        showFacultyToast('Attendance submit failed: ' + error.message, 'error');
     }
 };
 
@@ -756,7 +774,7 @@ break;
 
         default:
           contentDiv.innerHTML = `
-            <h2>Welcome to Presidency University</h2>
+            <h2>Welcome back to your workspace</h2>
             <p>Please select a section from the menu.</p>
           `;
           break;
@@ -1554,7 +1572,7 @@ break;
   <div class="container">
     <nav class="navbar">
       <div class="logo-container">
-        <img src="./Images/PresidencyImages/logo.png" alt="Presidency Logo" class="logo">
+        <img src="./Images/portal-mark.svg" alt="Campus Flow mark" class="logo">
       </div>
       <ul class="nav-list">
         <li>
@@ -1607,7 +1625,7 @@ break;
   <div class="containerr">
     <header class="header" id="mainHeader">
       <button id="menuToggle" class="menu-toggle">☰</button>
-      <h1>Presidency University, Bengaluru</h1>
+      <h1>Faculty workspace</h1>
       <span id="headerProfile">
         <span id="headerProfileName" style="font-weight:bold;margin-right:10px;"></span>
         <img id="headerProfileImg" src=" " alt="Profile" style="width:40px; height:40px; border-radius:50%; vertical-align:middle; margin-right:0px;">
